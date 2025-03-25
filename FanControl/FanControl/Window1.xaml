@@ -1,0 +1,396 @@
+﻿<Window x:Class="FanControlApp.MainWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="Fan Control"
+        Height="600" 
+        Width="528"
+        WindowStartupLocation="CenterScreen" ResizeMode="NoResize" FontFamily="Nirmala UI" Foreground="White" Background="#FF1D1D1D">
+    <Grid Margin="20,24,20,20">
+        <Grid.RowDefinitions>
+            <!-- Title / Header -->
+            <RowDefinition Height="Auto" MinHeight="64" />
+            <!-- Fan Speed Sliders -->
+            <RowDefinition Height="Auto" MinHeight="246.64" />
+            <!-- Temperature Thresholds -->
+            <RowDefinition Height="Auto" MinHeight="86.88" />
+            <!-- Current Speed, Turbo, etc. -->
+            <RowDefinition Height="Auto" MinHeight="54.88" />
+            <!-- Spacing -->
+            <RowDefinition />
+        </Grid.RowDefinitions>
+
+        <!-- SECTION 1: Title / Header -->
+        <TextBlock Grid.Row="0"
+                   FontWeight="Bold" 
+                   FontSize="20" 
+                   HorizontalAlignment="Center" 
+                   Margin="0,0,0,10" Width="200" ><Run Language="es-es" Text="Legion Fan Overdrive"/></TextBlock>
+
+        <!-- SECTION 2: Fan Speeds -->
+        <GroupBox Grid.Row="1" Header="Performance Fan Speeds (RPM)"
+                  Margin="0,0,0,10"
+                  FontWeight="Bold">
+            <UniformGrid Rows="1" Columns="6" Margin="10">
+               
+                <StackPanel HorizontalAlignment="Center" Margin="10,0">
+                    <TextBlock 
+                               HorizontalAlignment="Center" 
+                               FontWeight="SemiBold" ><Run Language="es-es" Text="1"/></TextBlock>
+                    <Slider x:Name="SliderFan1" 
+                        Minimum="1000" 
+                        Maximum="5000"
+                        Value="1800"
+                        TickFrequency="100"
+                        IsSnapToTickEnabled="True"
+                        Width="56" 
+                        Height="177"
+                        Orientation="Vertical">
+                        <Slider.Template>
+                            <ControlTemplate TargetType="{x:Type Slider}">
+                                <Grid>
+                                    <!-- Barra del slider -->
+                                    <Border Background="Gray" Width="4" HorizontalAlignment="Center"/>
+
+                                    <!-- Track -->
+                                    <Track x:Name="PART_Track">
+                                        <Track.Thumb>
+                                            <Thumb x:Name="Thumb">
+                                                <Thumb.Template>
+                                                    <ControlTemplate TargetType="{x:Type Thumb}">
+                                                        <Grid>
+
+                                                            <Border Width="40" Height="20" 
+                                                Background="WhiteSmoke"
+                                                CornerRadius="2"
+                                                BorderBrush="Black" BorderThickness="1"/>
+
+                                                            <TextBlock Text="{Binding Value, RelativeSource={RelativeSource AncestorType={x:Type Slider}}}" 
+                                                   Foreground="Black" 
+                                                   FontWeight="Bold"
+                                                  
+                                                   FontSize="12"
+                                                   VerticalAlignment="Center"
+                                                   HorizontalAlignment="Center"/>
+                                                        </Grid>
+                                                    </ControlTemplate>
+                                                </Thumb.Template>
+                                            </Thumb>
+                                        </Track.Thumb>
+                                    </Track>
+                                </Grid>
+                            </ControlTemplate>
+                        </Slider.Template>
+                    </Slider>
+
+                </StackPanel>
+
+                <StackPanel HorizontalAlignment="Center" Margin="10,0">
+                    <TextBlock 
+                               HorizontalAlignment="Center" 
+                               FontWeight="SemiBold" ><Run Language="es-es" Text="2"/></TextBlock>
+                    <Slider x:Name="SliderFan2" 
+                            Minimum="1000" 
+                            Maximum="5000"
+                            Value="2200"
+                            TickFrequency="100"
+                            IsSnapToTickEnabled="True"
+                            Width="55" 
+                            Height="180"
+                            Orientation="Vertical" RenderTransformOrigin="0.5,0.5">
+                        <Slider.Template>
+                            <ControlTemplate TargetType="{x:Type Slider}">
+                                <Grid>
+                                    <!-- Barra del slider -->
+                                    <Border Background="Gray" Width="4" HorizontalAlignment="Center"/>
+
+                                    <!-- Track -->
+                                    <Track x:Name="PART_Track">
+                                        <Track.Thumb>
+                                            <Thumb x:Name="Thumb">
+                                                <Thumb.Template>
+                                                    <ControlTemplate TargetType="{x:Type Thumb}">
+                                                        <Grid>
+
+                                                            <Border Width="40" Height="20" 
+                        Background="WhiteSmoke"
+                        CornerRadius="2"
+                        BorderBrush="Black" BorderThickness="1"/>
+
+                                                            <TextBlock Text="{Binding Value, RelativeSource={RelativeSource AncestorType={x:Type Slider}}}" 
+                           Foreground="Black" 
+                           FontWeight="Bold"
+                          
+                           FontSize="12"
+                           VerticalAlignment="Center"
+                           HorizontalAlignment="Center"/>
+                                                        </Grid>
+                                                    </ControlTemplate>
+                                                </Thumb.Template>
+                                            </Thumb>
+                                        </Track.Thumb>
+                                    </Track>
+                                </Grid>
+                            </ControlTemplate>
+                        </Slider.Template>
+                    </Slider>
+                </StackPanel>
+
+                <StackPanel HorizontalAlignment="Center" Margin="10,0">
+                    <TextBlock 
+                               HorizontalAlignment="Center" 
+                               FontWeight="SemiBold" ><Run Language="es-es" Text="3"/></TextBlock>
+                    <Slider x:Name="SliderFan3" 
+                            Minimum="1000" 
+                            Maximum="5000"
+                            Value="2600"
+                            TickFrequency="100"
+                            IsSnapToTickEnabled="True"
+                            Width="60" 
+                            Height="180"
+                            Orientation="Vertical">
+                        <Slider.Template>
+                            <ControlTemplate TargetType="{x:Type Slider}">
+                                <Grid>
+                                    <!-- Barra del slider -->
+                                    <Border Background="Gray" Width="4" HorizontalAlignment="Center"/>
+
+                                    <!-- Track -->
+                                    <Track x:Name="PART_Track">
+                                        <Track.Thumb>
+                                            <Thumb x:Name="Thumb">
+                                                <Thumb.Template>
+                                                    <ControlTemplate TargetType="{x:Type Thumb}">
+                                                        <Grid>
+
+                                                            <Border Width="40" Height="20" 
+    Background="WhiteSmoke"
+    CornerRadius="2"
+    BorderBrush="Black" BorderThickness="1"/>
+
+                                                            <TextBlock Text="{Binding Value, RelativeSource={RelativeSource AncestorType={x:Type Slider}}}" 
+       Foreground="Black" 
+       FontWeight="Bold"
+      
+       FontSize="12"
+       VerticalAlignment="Center"
+       HorizontalAlignment="Center"/>
+                                                        </Grid>
+                                                    </ControlTemplate>
+                                                </Thumb.Template>
+                                            </Thumb>
+                                        </Track.Thumb>
+                                    </Track>
+                                </Grid>
+                            </ControlTemplate>
+                        </Slider.Template>
+                    </Slider>
+                </StackPanel>
+
+                <StackPanel HorizontalAlignment="Center" Margin="10,0">
+                    <TextBlock 
+                               HorizontalAlignment="Center" 
+                               FontWeight="SemiBold" ><Run Language="es-es" Text="4"/></TextBlock>
+                    <Slider x:Name="SliderFan4" 
+                            Minimum="1000" 
+                            Maximum="5000"
+                            Value="3500"
+                            Height="180"
+                            TickFrequency="100"
+                            IsSnapToTickEnabled="True"
+                            Width="60" 
+                            Orientation="Vertical" ValueChanged="SliderFan4_ValueChanged">
+                        <Slider.Template>
+                            <ControlTemplate TargetType="{x:Type Slider}">
+                                <Grid>
+                                    <!-- Barra del slider -->
+                                    <Border Background="Gray" Width="4" HorizontalAlignment="Center"/>
+
+                                    <!-- Track -->
+                                    <Track x:Name="PART_Track">
+                                        <Track.Thumb>
+                                            <Thumb x:Name="Thumb">
+                                                <Thumb.Template>
+                                                    <ControlTemplate TargetType="{x:Type Thumb}">
+                                                        <Grid>
+
+                                                            <Border Width="40" Height="20" 
+    Background="WhiteSmoke"
+    CornerRadius="2"
+    BorderBrush="Black" BorderThickness="1"/>
+
+                                                            <TextBlock Text="{Binding Value, RelativeSource={RelativeSource AncestorType={x:Type Slider}}}" 
+       Foreground="Black" 
+       FontWeight="Bold"
+      
+       FontSize="12"
+       VerticalAlignment="Center"
+       HorizontalAlignment="Center"/>
+                                                        </Grid>
+                                                    </ControlTemplate>
+                                                </Thumb.Template>
+                                            </Thumb>
+                                        </Track.Thumb>
+                                    </Track>
+                                </Grid>
+                            </ControlTemplate>
+                        </Slider.Template>
+                   
+                    </Slider>
+                    
+                </StackPanel>
+
+                <StackPanel HorizontalAlignment="Center" Margin="10,0">
+                    <TextBlock 
+                               HorizontalAlignment="Center" 
+                               FontWeight="SemiBold" ><Run Language="es-es" Text="5"/></TextBlock>
+                    <Slider x:Name="SliderFan5" 
+                            Minimum="1000" 
+                            Maximum="5000"
+                            Value="4400"
+                            Height="180"
+                            TickFrequency="100"
+                            IsSnapToTickEnabled="True"
+                            Width="60" 
+                            Orientation="Vertical">
+                        <Slider.Template>
+                            <ControlTemplate TargetType="{x:Type Slider}">
+                                <Grid>
+                                    <!-- Barra del slider -->
+                                    <Border Background="Gray" Width="4" HorizontalAlignment="Center"/>
+
+                                    <!-- Track -->
+                                    <Track x:Name="PART_Track">
+                                        <Track.Thumb>
+                                            <Thumb x:Name="Thumb">
+                                                <Thumb.Template>
+                                                    <ControlTemplate TargetType="{x:Type Thumb}">
+                                                        <Grid>
+
+                                                            <Border Width="40" Height="20" 
+                                                            Background="WhiteSmoke"
+                                                            CornerRadius="2"
+                                                            BorderBrush="Black" BorderThickness="1"/>
+
+                                                            <TextBlock Text="{Binding Value, RelativeSource={RelativeSource AncestorType={x:Type Slider}}}" 
+                                                               Foreground="Black" 
+                                                               FontWeight="Bold"
+      
+                                                               FontSize="12"
+                                                               VerticalAlignment="Center"
+                                                               HorizontalAlignment="Center"/>
+                                                        </Grid>
+                                                    </ControlTemplate>
+                                                </Thumb.Template>
+                                            </Thumb>
+                                        </Track.Thumb>
+                                    </Track>
+                                </Grid>
+                            </ControlTemplate>
+                        </Slider.Template>
+                   
+                    </Slider>
+                </StackPanel>
+
+                <StackPanel HorizontalAlignment="Center" Margin="10,0">
+                    <TextBlock 
+                               HorizontalAlignment="Center" 
+                               FontWeight="SemiBold" ><Run Language="es-es" Text="6"/></TextBlock>
+                    <Slider x:Name="SliderFan6" 
+                            Minimum="1000" 
+                            Maximum="5000"
+                            Value="5000"
+                            Height="180"
+                            TickFrequency="100"
+                            IsSnapToTickEnabled="True"
+                            Width="60" 
+                            Orientation="Vertical">
+                        <Slider.Template>
+                            <ControlTemplate TargetType="{x:Type Slider}">
+                                <Grid>
+                                    <!-- Barra del slider -->
+                                    <Border Background="Gray" Width="4" HorizontalAlignment="Center"/>
+
+                                    <!-- Track -->
+                                    <Track x:Name="PART_Track">
+                                        <Track.Thumb>
+                                            <Thumb x:Name="Thumb">
+                                                <Thumb.Template>
+                                                    <ControlTemplate TargetType="{x:Type Thumb}">
+                                                        <Grid>
+
+                                                            <Border Width="40" Height="20" 
+    Background="WhiteSmoke"
+    CornerRadius="2"
+    BorderBrush="Black" BorderThickness="1"/>
+
+                                                            <TextBlock Text="{Binding Value, RelativeSource={RelativeSource AncestorType={x:Type Slider}}}" 
+       Foreground="Black" 
+       FontWeight="Bold"
+      
+       FontSize="12"
+       VerticalAlignment="Center"
+       HorizontalAlignment="Center"/>
+                                                        </Grid>
+                                                    </ControlTemplate>
+                                                </Thumb.Template>
+                                            </Thumb>
+                                        </Track.Thumb>
+                                    </Track>
+                                </Grid>
+                            </ControlTemplate>
+                        </Slider.Template>
+                  
+                    </Slider>
+                </StackPanel>
+            </UniformGrid>
+        </GroupBox>
+
+        <!-- SECTION 3: Temperature Thresholds -->
+        <GroupBox Grid.Row="2" Header="Performance Temperature Points (°C)"
+                  FontWeight="Bold"
+                  Margin="0,0,0,10">
+            <UniformGrid Rows="1" Columns="6" Margin="10">
+                <StackPanel HorizontalAlignment="Center">
+                    <TextBlock HorizontalAlignment="Center" ><Run Language="es-es" Text="C°"/></TextBlock>
+                    <TextBox x:Name="TempThreshold1" Width="50" Text="50" />
+                </StackPanel>
+                <StackPanel HorizontalAlignment="Center">
+                    <TextBlock Text="C°" HorizontalAlignment="Center" />
+                    <TextBox x:Name="TempThreshold2" Width="50" Text="60" />
+                </StackPanel>
+                <StackPanel HorizontalAlignment="Center">
+                    <TextBlock Text="C°" HorizontalAlignment="Center" />
+                    <TextBox x:Name="TempThreshold3" Width="50" Text="65" />
+                </StackPanel>
+                <StackPanel HorizontalAlignment="Center">
+                    <TextBlock Text="C°" HorizontalAlignment="Center" />
+                    <TextBox x:Name="TempThreshold4" Width="50" Text="70" />
+                </StackPanel>
+                <StackPanel HorizontalAlignment="Center">
+                    <TextBlock Text="C°" HorizontalAlignment="Center" />
+                    <TextBox x:Name="TempThreshold5" Width="50" Text="80" />
+                </StackPanel>
+                <StackPanel HorizontalAlignment="Center">
+                    <TextBlock Text="C°" HorizontalAlignment="Center" />
+                    <TextBox x:Name="TempThreshold6" Width="50" Text="90" />
+                </StackPanel>
+            </UniformGrid>
+        </GroupBox>
+
+        <!-- SECTION 4: Current Speed / Buttons -->
+        <StackPanel Grid.Row="3" Orientation="Horizontal" HorizontalAlignment="Center" Margin="0,10,0,10" Width="110">
+
+            <Button x:Name="TurboButton" Content="Turbo" 
+                    Width="100" Margin="0,0,10,0" />
+        </StackPanel>
+        <TextBox HorizontalAlignment="Left" Margin="20,0,0,0" Grid.Row="3" TextWrapping="Wrap" Text="RPM" VerticalAlignment="Center" Width="99" Height="20"/>
+        <CheckBox x:Name="HybridModeCheck" Content="Unlock" 
+                      Margin="378,0,54,0"
+                      VerticalAlignment="Center" Grid.Row="3" Height="15"/>
+        <ComboBox Margin="382,37,10,0" VerticalAlignment="Top" SelectedIndex="0" Height="22">
+            <ComboBoxItem Content="Legion 5 15"/>
+            <ComboBoxItem Content="Profile 2"/>
+        </ComboBox>
+        <TextBlock HorizontalAlignment="Left" Margin="413,9,0,0" TextWrapping="Wrap" VerticalAlignment="Top" Height="16" Width="34"><Run Language="es-es" Text="Profile"/></TextBlock>
+    </Grid>
+</Window>

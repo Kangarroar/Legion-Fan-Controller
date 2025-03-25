@@ -1,0 +1,1 @@
+using System.Windows;namespace FanControl{    public partial class App : Application    {    }}

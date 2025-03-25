@@ -1,11 +1,6 @@
-﻿using System;
-using System.IO;
-using System.Runtime.InteropServices;
+﻿using System.IO;
 using System.Management;
-using System.Security.Cryptography;
-using Microsoft.Win32.SafeHandles;
-using System.Runtime.CompilerServices;
-using FanControl.Utils;
+using System.Runtime.InteropServices;
 using static FanControl.Utils.EC;
 
 // Continued and Finished by Zandyz(Discord) https://github.com/Z4ndyz
@@ -416,26 +411,26 @@ namespace FanControl.Utils
             WriteStopRGBFanWakeToEC(ecAddrPort, ecDataPort, stopRGBFanWakeValue);
             WriteFanTableChangeCounterToEC(ecAddrPort, ecDataPort, fanTableChangeCounterValue);
 
-/*            DebugReadECAddresses( // Decomment this if you don't need to double check the data and the program works correctly
-                legionGen,
-                fanCurvePoints,
-                fanAcclValue,
-                fanDecclValue,
-                fanRpmPointsValue,
-                cpuTempsRampUp,
-                cpuTempsRampDown,
-                gpuTempsRampUp,
-                gpuTempsRampDown,
-                hstTempsRampUp,
-                hstTempsRampDown,
-                ecAddrPort,
-                ecDataPort,
-                powerModeWMI,
-                filePath
-           );
+            /*            DebugReadECAddresses( // Decomment this if you don't need to double check the data and the program works correctly
+                            legionGen,
+                            fanCurvePoints,
+                            fanAcclValue,
+                            fanDecclValue,
+                            fanRpmPointsValue,
+                            cpuTempsRampUp,
+                            cpuTempsRampDown,
+                            gpuTempsRampUp,
+                            gpuTempsRampDown,
+                            hstTempsRampUp,
+                            hstTempsRampDown,
+                            ecAddrPort,
+                            ecDataPort,
+                            powerModeWMI,
+                            filePath
+                       );
 
-            // Keep the console window open for user observation (Debug Reading)
-            Console.ReadLine();*/
+                        // Keep the console window open for user observation (Debug Reading)
+                        Console.ReadLine();*/
         }
 
         private static void WriteFanTableChangeCounterToEC(byte ecAddrPort, byte ecDataPort, byte fanTableChangeCounterValue)

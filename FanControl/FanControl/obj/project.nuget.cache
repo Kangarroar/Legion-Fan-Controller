@@ -1,11 +1,12 @@
 {
   "version": 2,
-  "dgSpecHash": "pCvi6uWUoYjXXGGNg5aPzYFMYzQjrm2ZwHYIG6xtxgrlIaKhAOC8qt3idem1H0DkDKWxjyEjddASLgomt0xTGw==",
+  "dgSpecHash": "lTPrJ8jFKx4=",
   "success": true,
-  "projectFilePath": "C:\\Users\\AndyG\\Desktop\\Scripts\\LegionFanControl_WinRing\\LegionFanControl_WinRing_IO_Ports\\LegionGen5-6FanControl_WinRing_Smokeless_I-OPortsMethod\\FanControl\\FanControl\\FanControl.csproj",
+  "projectFilePath": "C:\\Users\\Pedro\\Source\\Repos\\LegionGen5-6FanControl_WinRing_Smokeless_I-OPortsMethod\\FanControl\\FanControl\\FanControl.csproj",
   "expectedPackageFiles": [
-    "C:\\Users\\AndyG\\.nuget\\packages\\system.codedom\\8.0.0\\system.codedom.8.0.0.nupkg.sha512",
-    "C:\\Users\\AndyG\\.nuget\\packages\\system.management\\8.0.0\\system.management.8.0.0.nupkg.sha512"
+    "C:\\Users\\Pedro\\.nuget\\packages\\system.codedom\\8.0.0\\system.codedom.8.0.0.nupkg.sha512",
+    "C:\\Users\\Pedro\\.nuget\\packages\\system.management\\8.0.0\\system.management.8.0.0.nupkg.sha512",
+    "C:\\Users\\Pedro\\.nuget\\packages\\microsoft.windows.sdk.net.ref\\10.0.19041.57\\microsoft.windows.sdk.net.ref.10.0.19041.57.nupkg.sha512"
   ],
   "logs": []
 }
