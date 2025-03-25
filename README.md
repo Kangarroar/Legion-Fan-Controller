@@ -1,4 +1,5 @@
-#Lenovo Legión 5/6 Fan Controller
+#
+Lenovo Legión 5/6 Fan Controller
 Forked from LegionGen5-6FanControl_WinRing_Smokeless_I-OPortsMethod
 
 
