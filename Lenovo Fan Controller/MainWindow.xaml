@@ -92,7 +92,7 @@
                         </Grid.ColumnDefinitions>
 
                         <StackPanel>
-                            <TextBlock x:Name="ProfileText" Text='Profile: "Default"' Style="{StaticResource HeaderTextBlockStyle}"/>
+                            <TextBlock x:Name="ProfileText" Text='Profile: "Default"' Style="{StaticResource SubheaderTextBlockStyle}"/>
                             <TextBlock Text="Adjust fan curves for each temperature point"
                                    Style="{StaticResource BodyTextBlockStyle}"
                                    Opacity="0.8"

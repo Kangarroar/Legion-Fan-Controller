@@ -2,6 +2,7 @@ using Microsoft.UI;
 using Microsoft.UI.Windowing;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
+using Microsoft.UI.Xaml.Media;
 using System;
 using System.Diagnostics;
 using System.IO;
@@ -37,8 +38,8 @@ namespace Lenovo_Fan_Controller
             var appWindow = AppWindow.GetFromWindowId(windowId);
 
             var displayArea = DisplayArea.GetFromWindowId(windowId, DisplayAreaFallback.Primary);
-            var width = 800;
-            var height = 750;
+            var width = 850;
+            var height = 780;
             appWindow.MoveAndResize(new Windows.Graphics.RectInt32(
                 (displayArea.WorkArea.Width - width) / 2,
                 (displayArea.WorkArea.Height - height) / 2,
@@ -51,8 +52,6 @@ namespace Lenovo_Fan_Controller
             DeviceSelector.SelectionChanged += DeviceSelector_SelectionChanged;
             Save.Click += Save_Click;
             Restart.Click += Restart_Click;
-            Turbo.Click += Turbo_Click;
-            Quiet.Click += Quiet_Click;
         }
         private async Task InitializeWhenReadyAsync()
         {
@@ -148,6 +147,8 @@ namespace Lenovo_Fan_Controller
         {
             return new FanConfig
             {
+                //TODO: Check if Legion Gen 5 or 6th
+                //      Check if sys has info about max rpm for fans to automatically set the max.
                 LegionGeneration = GetConfigValue(lines, "legion_gen", 5),
                 FanCurvePoints = GetConfigValue(lines, "fan_curve_points", 5),
                 AccelerationValue = GetConfigValue(lines, "fan_accl_value", 2),
@@ -245,14 +246,12 @@ hst_temps_ramp_down : 10 48 53 63 68";
 
         private void UpdateUI()
         {
-            // Update sliders
             Slider1.Value = currentConfig.FanRpmPoints[0];
             Slider2.Value = currentConfig.FanRpmPoints[1];
             Slider3.Value = currentConfig.FanRpmPoints[2];
             Slider4.Value = currentConfig.FanRpmPoints[3];
             Slider5.Value = currentConfig.FanRpmPoints[4];
 
-            // Update temperature values
             CpuTemp1.Value = currentConfig.CpuTempsRampUp[0];
             CpuTemp2.Value = currentConfig.CpuTempsRampUp[1];
             CpuTemp3.Value = currentConfig.CpuTempsRampUp[2];
@@ -265,11 +264,9 @@ hst_temps_ramp_down : 10 48 53 63 68";
             GpuTemp4.Value = currentConfig.GpuTempsRampUp[3];
             GpuTemp5.Value = currentConfig.GpuTempsRampUp[4];
 
-            // Update advanced settings
             AccVal.Value = currentConfig.AccelerationValue;
             DecVal.Value = currentConfig.DecelerationValue;
 
-            // Update profile name
             ProfileText.Text = $"Profile: \"{currentProfile.ToUpper()}\"";
         }
 
@@ -286,7 +283,7 @@ hst_temps_ramp_down : 10 48 53 63 68";
                 currentConfig.AccelerationValue = (int)AccVal.Value;
                 currentConfig.DecelerationValue = (int)DecVal.Value;
 
-                // Update temperature thresholds from UI
+                // Update from UI °
                 currentConfig.CpuTempsRampUp = new[] {
             (int)CpuTemp1.Value, (int)CpuTemp2.Value,
             (int)CpuTemp3.Value, (int)CpuTemp4.Value,
@@ -299,7 +296,7 @@ hst_temps_ramp_down : 10 48 53 63 68";
             (int)GpuTemp5.Value
         };
 
-                // Get correct config path
+                // Config path
                 string configPath = currentProfile switch
                 {
                     "performance" => App.PerformanceConfigPath,
@@ -307,7 +304,7 @@ hst_temps_ramp_down : 10 48 53 63 68";
                     _ => App.BalancedConfigPath
                 };
 
-                // Generate config content
+                // Generate config
                 string configContent = GenerateConfigContent();
                 File.WriteAllText(configPath, configContent);
 
@@ -320,7 +317,7 @@ hst_temps_ramp_down : 10 48 53 63 68";
         }
         private string GenerateConfigContent()
         {
-            // Auto-calculate ramp_down values (3°C lower than ramp_up)
+            // Auto-calc 3°C lower than ramp_up
             int[] cpuRampDown = currentConfig.CpuTempsRampUp.Select(t => Math.Max(0, t - 3)).ToArray();
             int[] gpuRampDown = currentConfig.GpuTempsRampUp.Select(t => Math.Max(0, t - 3)).ToArray();
 
@@ -409,28 +406,40 @@ hst_temps_ramp_down : {string.Join(" ", gpuRampDown)}";
             }
         }
 
-        private void Turbo_Click(object sender, RoutedEventArgs e)
+        //TURBO
+        private bool turboEnabled = false;
+        private int[] originalRpmValues = new int[5];
+
+        private void Turbo_Checked(object sender, RoutedEventArgs e)
         {
-            // Set aggressive fan curve
-            Slider1.Value = 3000;
-            Slider2.Value = 3500;
-            Slider3.Value = 4000;
-            Slider4.Value = 4200;
+            originalRpmValues[0] = (int)Slider1.Value;
+            originalRpmValues[1] = (int)Slider2.Value;
+            originalRpmValues[2] = (int)Slider3.Value;
+            originalRpmValues[3] = (int)Slider4.Value;
+            originalRpmValues[4] = (int)Slider5.Value;
+
+            // Set all fans to max RPM (4400) LEGION 5 15ANH05
+            Slider1.Value = 4400;
+            Slider2.Value = 4400;
+            Slider3.Value = 4400;
+            Slider4.Value = 4400;
             Slider5.Value = 4400;
-            AccVal.Value = 3;
-            DecVal.Value = 1;
+
+            turboEnabled = true;
+            Turbo.Background = new SolidColorBrush(Colors.Red);
         }
 
-        private void Quiet_Click(object sender, RoutedEventArgs e)
+        private void Turbo_Unchecked(object sender, RoutedEventArgs e)
         {
-            // Set quiet fan curve
-            Slider1.Value = 1000;
-            Slider2.Value = 2000;
-            Slider3.Value = 2500;
-            Slider4.Value = 3000;
-            Slider5.Value = 3500;
-            AccVal.Value = 1;
-            DecVal.Value = 3;
+            // Restore
+            Slider1.Value = originalRpmValues[0];
+            Slider2.Value = originalRpmValues[1];
+            Slider3.Value = originalRpmValues[2];
+            Slider4.Value = originalRpmValues[3];
+            Slider5.Value = originalRpmValues[4];
+
+            turboEnabled = false;
+            Turbo.Background = new SolidColorBrush(Colors.Transparent);
         }
     }
 }
