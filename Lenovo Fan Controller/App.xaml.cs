@@ -19,6 +19,7 @@ namespace Lenovo_Fan_Controller
 
         }
 
+
         private void InitializePaths()
         {
             string baseDir = AppContext.BaseDirectory;

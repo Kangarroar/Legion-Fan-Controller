@@ -427,9 +427,9 @@ hst_temps_ramp_down : {string.Join(" ", gpuRampDown)}";
                 var startInfo = new ProcessStartInfo
                 {
                     FileName = App.FanControlPath,
-                    UseShellExecute = false,
-                    CreateNoWindow = true,
-                    WindowStyle = ProcessWindowStyle.Hidden
+                    UseShellExecute = false,  
+                    CreateNoWindow = true,   
+                    WindowStyle = ProcessWindowStyle.Hidden 
                 };
 
                 Process.Start(startInfo);
@@ -437,9 +437,10 @@ hst_temps_ramp_down : {string.Join(" ", gpuRampDown)}";
             catch (Exception ex)
             {
                 Debug.WriteLine($"FanControl restart failed: {ex.Message}");
-                // Optionally show a user-friendly message
+              
                 ShowErrorDialog("Fan Control Error", $"Failed to restart fan control: {ex.Message}");
             }
+        
         }
         private async void NavigationView_SelectionChanged(NavigationView sender, NavigationViewSelectionChangedEventArgs args)
         {
