@@ -1,0 +1,11 @@
+legion_gen : 6
+fan_curve_points : 9
+fan_accl_value : 2
+fan_deccl_value : 2
+fan_rpm_points : 0 0 2200 3600 3900 4200 4500 4800 5000
+cpu_temps_ramp_up : 11 45 55 60 65 70 75 80 90
+cpu_temps_ramp_down : 10 43 53 58 63 68 73 78 87
+gpu_temps_ramp_up : 11 50 55 60 63 66 69 72 75
+gpu_temps_ramp_down : 10 48 53 58 61 63 77 70 73
+hst_temps_ramp_up : 11 50 55 65 70 75 80 85 90
+hst_temps_ramp_down : 10 48 53 63 68 73 78 83 85

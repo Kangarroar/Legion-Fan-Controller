@@ -1,56 +1,76 @@
-﻿using System;
-using System.Collections.Generic;
+﻿using Microsoft.UI.Xaml;
+using System;
 using System.IO;
-using System.Linq;
-using System.Runtime.InteropServices.WindowsRuntime;
-using Microsoft.UI.Xaml;
-using Microsoft.UI.Xaml.Controls;
-using Microsoft.UI.Xaml.Controls.Primitives;
-using Microsoft.UI.Xaml.Data;
-using Microsoft.UI.Xaml.Input;
-using Microsoft.UI.Xaml.Media;
-using Microsoft.UI.Xaml.Navigation;
-using Microsoft.UI.Xaml.Shapes;
-using Windows.ApplicationModel;
-using Windows.ApplicationModel.Activation;
-using Windows.Foundation;
-using Windows.Foundation.Collections;
-
-// To learn more about WinUI, the WinUI project structure,
-// and more about our project templates, see: http://aka.ms/winui-project-info.
 
 namespace Lenovo_Fan_Controller
 {
-    /// <summary>
-    /// Provides application-specific behavior to supplement the default Application class.
-    /// </summary>
     public partial class App : Application
     {
-        /// <summary>
-        /// Initializes the singleton application object.  This is the first line of authored code
-        /// executed, and as such is the logical equivalent of main() or WinMain().
-        /// </summary>
+        public static string FanControlPath { get; private set; } //STOP CRASHING?????????
+        public static string BalancedConfigPath { get; private set; }
+        public static string PerformanceConfigPath { get; private set; }
+        public static string QuietConfigPath { get; private set; }
+
         public App()
         {
             this.InitializeComponent();
+            InitializePaths();
+            InitializeConfigFiles();
         }
 
-        /// <summary>
-        /// Invoked when the application is launched.
-        /// </summary>
-        /// <param name="args">Details about the launch request and process.</param>
-        protected override void OnLaunched(Microsoft.UI.Xaml.LaunchActivatedEventArgs args)
+        private void InitializePaths()
         {
+            string baseDir = AppContext.BaseDirectory;
+            string fanControlDir = Path.Combine(baseDir, "Fan Control");
+            Directory.CreateDirectory(fanControlDir);
+
+            FanControlPath = Path.Combine(fanControlDir, "FanControl.exe");
+            BalancedConfigPath = Path.Combine(fanControlDir, "fan_config_balanced.txt");
+            PerformanceConfigPath = Path.Combine(fanControlDir, "fan_config_perfcust.txt");
+            QuietConfigPath = Path.Combine(fanControlDir, "fan_config_quiet.txt");
+        }
+
+        private void InitializeConfigFiles()
+        {
+            string defaultConfig = @"legion_gen : 5
+fan_curve_points : 5
+fan_accl_value : 2
+fan_deccl_value : 2
+fan_rpm_points : 0 0 2200 3600 3900
+cpu_temps_ramp_up : 11 45 55 60 65
+cpu_temps_ramp_down : 10 43 53 58 63
+gpu_temps_ramp_up : 11 50 55 60 63
+gpu_temps_ramp_down : 10 48 53 58 61
+hst_temps_ramp_up : 11 50 55 65 70
+hst_temps_ramp_down : 10 48 53 63 68";
+
+            CreateConfigIfNeeded(BalancedConfigPath, defaultConfig);
+            CreateConfigIfNeeded(PerformanceConfigPath, defaultConfig);
+            CreateConfigIfNeeded(QuietConfigPath, defaultConfig.Replace("3900", "4400"));
+        }
+
+        private void CreateConfigIfNeeded(string path, string content)
+        {
+            if (!File.Exists(path) || new FileInfo(path).Length == 0)
+            {
+                File.WriteAllText(path, content);
+            }
+        }
+
+        protected override void OnLaunched(LaunchActivatedEventArgs args)
+        {
+            // Config files are already initialized by now
             m_window = new MainWindow();
             m_window.ExtendsContentIntoTitleBar = true;
+
             if (m_window.Content is FrameworkElement rootElement)
             {
                 m_window.SetTitleBar(rootElement.FindName("AppTitleBar") as UIElement);
             }
-        m_window.Activate();
+
+            m_window.Activate();
         }
 
-        private Window? m_window;
-
+        private Window m_window;
     }
 }
