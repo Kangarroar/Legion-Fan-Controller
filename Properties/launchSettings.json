@@ -1,0 +1,10 @@
+{
+  "profiles": {
+    "Lenovo Fan Controller (Package)": {
+      "commandName": "MsixPackage"
+    },
+    "Lenovo Fan Controller (Unpackaged)": {
+      "commandName": "Project"
+    }
+  }
+}
