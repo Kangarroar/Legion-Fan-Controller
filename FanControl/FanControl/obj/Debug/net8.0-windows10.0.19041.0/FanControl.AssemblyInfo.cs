@@ -14,7 +14,7 @@ using System.Reflection;
 [assembly: System.Reflection.AssemblyCompanyAttribute("FanControl")]
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Debug")]
 [assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+db261be5d26b77c4448e7aec6fdd6026667a43c4")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+e117292536c5131eb20fb8815816058ec1b65320")]
 [assembly: System.Reflection.AssemblyProductAttribute("FanControl")]
 [assembly: System.Reflection.AssemblyTitleAttribute("FanControl")]
 [assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")]

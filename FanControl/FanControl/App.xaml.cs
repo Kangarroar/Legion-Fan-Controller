@@ -1,1 +1,11 @@
-using System.Windows;namespace FanControl{    public partial class App : Application    {    }}
+
+using System.Windows;
+
+
+namespace FanControlApp
+{
+    public partial class App : Application
+    {
+        
+    }
+}
