@@ -4,183 +4,280 @@
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
     xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
     xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+    xmlns:muxc="using:Microsoft.UI.Xaml.Controls"
     mc:Ignorable="d"
     Title="Legion Fan Controller">
 
     <Grid Background="#1E1E1E">
-        <!-- Main Content -->
-        <Grid Margin="12">
-            <!-- Title -->
-            <TextBlock Text="Legion Fan Controller" 
-                       Style="{StaticResource SubtitleTextBlockStyle}"
-                       Margin="0,0,0,20"/>
+        <!-- Main layout structure -->
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <!-- Title bar -->
+            <RowDefinition Height="*"/>
+        </Grid.RowDefinitions>
 
+        <!-- Custom Title Bar -->
+        <Border x:Name="AppTitleBar" Grid.Row="0" Height="42" Background="Transparent">
             <Grid>
-                <Grid.ColumnDefinitions>
-                    <ColumnDefinition Width="Auto"/>
-                    <ColumnDefinition Width="*"/>
-                </Grid.ColumnDefinitions>
+                <TextBlock x:Name="AppTitle" Text="Legion Fan Controller"
+                           VerticalAlignment="Center" Margin="12,0,0,0"/>
+            </Grid>
+        </Border>
 
-                <!-- Navigation Pane -->
-                <Border Grid.Column="0" 
-                        Width="200" 
-                        Margin="0,0,12,0"
-                        Background="#2A2A2A"
-                        CornerRadius="8"
-                        Padding="12">
-                    <StackPanel>
-                        <TextBlock Text="PROFILES" 
-                                   Style="{StaticResource CaptionTextBlockStyle}"
-                                   Opacity="0.7"
-                                   Margin="0,0,0,8"/>
+        <!-- Main Content Area -->
+        <Grid Grid.Row="1" Margin="12,0,12,12">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="Auto"/>
+                <ColumnDefinition Width="*"/>
+            </Grid.ColumnDefinitions>
 
-                        <ListView x:Name="ProfileList" 
-                                  SelectionMode="Single"
-                                  Background="Transparent"
-                                  BorderThickness="0">
-                            <ListViewItem Content="Default" IsSelected="True"/>
-                            <ListViewItem Content="Performance"/>
-                            <ListViewItem Content="Quiet"/>
-                        </ListView>
+            <!-- Navigation Pane -->
+            <muxc:NavigationView Grid.Column="0"
+                PaneDisplayMode="Left"
+                IsTabStop="True"
+                IsSettingsVisible="False"
+                IsBackEnabled="False"
+                IsBackButtonVisible="Collapsed"
+                IsPaneToggleButtonVisible="False"
+                OpenPaneLength="200"
+                Margin="0,0,12,0">
 
-                        <Button Content="Add profile" 
-                                Background="#3A3A3A"
-                                Foreground="White"
-                                BorderThickness="0"
-                                CornerRadius="4"
-                                Padding="12,8"
-                                Margin="0,12,0,0"/>
-                    </StackPanel>
-                </Border>
+                <muxc:NavigationView.MenuItems>
+                    <muxc:NavigationViewItem Content="Default" Tag="default" IsSelected="True">
+                        <muxc:NavigationViewItem.Icon>
+                            <FontIcon Glyph="&#xE8F1;"/>
+                        </muxc:NavigationViewItem.Icon>
+                    </muxc:NavigationViewItem>
+                    <muxc:NavigationViewItem Content="Performance" Tag="performance">
+                        <muxc:NavigationViewItem.Icon>
+                            <FontIcon Glyph="&#xE93A;"/>
+                        </muxc:NavigationViewItem.Icon>
+                    </muxc:NavigationViewItem>
+                    <muxc:NavigationViewItem Content="Quiet" Tag="quiet">
+                        <muxc:NavigationViewItem.Icon>
+                            <FontIcon Glyph="&#xE994;"/>
+                        </muxc:NavigationViewItem.Icon>
+                    </muxc:NavigationViewItem>
+                </muxc:NavigationView.MenuItems>
 
-                <!-- Main Content -->
-                <Border Grid.Column="1"
-                    Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
-                    CornerRadius="8"
-                    Padding="24">
-                    <Grid>
-                        <Grid.RowDefinitions>
-                            <RowDefinition Height="Auto"/>
-                            <RowDefinition Height="*"/>
-                            <RowDefinition Height="Auto"/>
-                        </Grid.RowDefinitions>
+                <muxc:NavigationView.PaneFooter>
+                    <Button Content="Restart" 
+                            HorizontalAlignment="Stretch"
+                            Margin="12,0,12,12"
+                            CornerRadius="4"
+                            Background="#3A3A3A"
+                            Foreground="White">
+                        <ToolTipService.ToolTip>
+                            <ToolTip Content="Restarts the Fan Control service." VerticalOffset="40"/>
+                        </ToolTipService.ToolTip>
+                    </Button>
+                </muxc:NavigationView.PaneFooter>
+            </muxc:NavigationView>
 
-                        <!-- Profile Header -->
-                        <StackPanel Grid.Row="0">
-                            <TextBlock Text='Profile: "Default"' 
-                                   Style="{StaticResource HeaderTextBlockStyle}"/>
+            <!-- Main Content -->
+            <Border Grid.Column="1" Background="{ThemeResource CardBackgroundFillColorDefaultBrush}" CornerRadius="8" Padding="24">
+                <Grid>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="*"/>
+                        <RowDefinition Height="Auto"/>
+                    </Grid.RowDefinitions>
+
+                    <!-- Profile Header -->
+                    <Grid Grid.Row="0">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="Auto"/>
+                        </Grid.ColumnDefinitions>
+
+                        <StackPanel>
+                            <TextBlock Text='Profile: "Default"' Style="{StaticResource HeaderTextBlockStyle}"/>
                             <TextBlock Text="Adjust fan curves for each temperature point"
                                    Style="{StaticResource BodyTextBlockStyle}"
                                    Opacity="0.8"
                                    Margin="0,4,0,16"/>
                         </StackPanel>
 
-                        <!-- Fan Controls with Temperature Points -->
-                        <ScrollViewer Grid.Row="1" 
-                                 VerticalScrollBarVisibility="Auto"
-                                 HorizontalScrollBarVisibility="Disabled"
-                                 Margin="0,0,0,24">
-                            <StackPanel Orientation="Horizontal" 
-                                    HorizontalAlignment="Center"
-                                    Spacing="24">
+                        <ComboBox x:Name="DeviceSelector" Grid.Column="1"
+                              HorizontalAlignment="Right"
+                              Width="120"
+                              SelectedIndex="0">
+                            <ComboBoxItem Content="Legion 5th"/>
+                            <ComboBoxItem Content="Legion 6th"/>
+                            <ToolTipService.ToolTip>
+                                <ToolTip Content="Select your Lenovo Legion Generation." VerticalOffset="-60"/>
+                            </ToolTipService.ToolTip>
 
-                                <!-- Fan 1 Column -->
-                                <StackPanel Spacing="8" Width="80">
-                                    <TextBlock Text="Fan 1" HorizontalAlignment="Center"/>
-                                    <Slider Value="1000" 
-                                        SmallChange="100" 
-                                        LargeChange="500"
-                                        Orientation="Vertical" 
-                                        Minimum="1000" 
-                                        Maximum="4400" 
-                                        Height="200"/>
-                                    <StackPanel Spacing="4" Margin="0,8,0,0">
-                                        <TextBlock Text="CPU Temp" Opacity="0.8" FontSize="12"/>
-                                        <TextBox Text="20" HorizontalAlignment="Stretch"/>
-                                        <TextBlock Text="GPU Temp" Opacity="0.8" FontSize="12" Margin="0,4,0,0"/>
-                                        <TextBox Text="20" HorizontalAlignment="Stretch"/>
-                                    </StackPanel>
-                                </StackPanel>
+                        </ComboBox>
+                    </Grid>
 
-                                <!-- Fan 2 Column -->
-                                <StackPanel Spacing="8" Width="80">
-                                    <TextBlock Text="Fan 2" HorizontalAlignment="Center"/>
-                                    <Slider Value="2400" 
-                                        SmallChange="100" 
-                                        LargeChange="500"
-                                        Orientation="Vertical" 
-                                        Minimum="1000" 
-                                        Maximum="4400" 
-                                        Height="200"/>
-                                    <StackPanel Spacing="4" Margin="0,8,0,0">
-                                        <TextBlock Text="CPU Temp" Opacity="0.8" FontSize="12"/>
-                                        <TextBox Text="45" HorizontalAlignment="Stretch"/>
-                                        <TextBlock Text="GPU Temp" Opacity="0.8" FontSize="12" Margin="0,4,0,0"/>
-                                        <TextBox Text="50" HorizontalAlignment="Stretch"/>
-                                    </StackPanel>
-                                </StackPanel>
+                    <!-- Fan Controls -->
+                    <ScrollViewer Grid.Row="1" 
+                         VerticalScrollBarVisibility="Auto"
+                         HorizontalScrollBarVisibility="Disabled"
+                         Margin="0,0,0,24">
+                        <StackPanel Orientation="Horizontal" 
+                                HorizontalAlignment="Center"
+                                Spacing="24">
 
-                                <!-- Fan 3 Column -->
-                                <StackPanel Spacing="8" Width="80">
-                                    <TextBlock Text="Fan 3" HorizontalAlignment="Center"/>
-                                    <Slider Value="3700" 
-                                        SmallChange="100" 
-                                        LargeChange="500"
-                                        Orientation="Vertical" 
-                                        Minimum="1000" 
-                                        Maximum="4400" 
-                                        Height="200"/>
-                                    <StackPanel Spacing="4" Margin="0,8,0,0">
-                                        <TextBlock Text="CPU Temp" Opacity="0.8" FontSize="12"/>
-                                        <TextBox Text="65" HorizontalAlignment="Stretch"/>
-                                        <TextBlock Text="GPU Temp" Opacity="0.8" FontSize="12" Margin="0,4,0,0"/>
-                                        <TextBox Text="55" HorizontalAlignment="Stretch"/>
-                                    </StackPanel>
-                                </StackPanel>
-
-                                <!-- Fan 4 Column -->
-                                <StackPanel Spacing="8" Width="80">
-                                    <TextBlock Text="Fan 4" HorizontalAlignment="Center"/>
-                                    <Slider Value="4000" 
-                                        SmallChange="100" 
-                                        LargeChange="500"
-                                        Orientation="Vertical" 
-                                        Minimum="1000" 
-                                        Maximum="4400" 
-                                        Height="200"/>
-                                    <StackPanel Spacing="4" Margin="0,8,0,0">
-                                        <TextBlock Text="CPU Temp" Opacity="0.8" FontSize="12"/>
-                                        <TextBox Text="70" HorizontalAlignment="Stretch"/>
-                                        <TextBlock Text="GPU Temp" Opacity="0.8" FontSize="12" Margin="0,4,0,0"/>
-                                        <TextBox Text="60" HorizontalAlignment="Stretch"/>
-                                    </StackPanel>
-                                </StackPanel>
-
-                                <!-- Fan 5 Column -->
-                                <StackPanel Spacing="8" Width="80">
-                                    <TextBlock Text="Fan 5" HorizontalAlignment="Center"/>
-                                    <Slider Value="4400" 
-                                        SmallChange="100" 
-                                        LargeChange="500"
-                                        Orientation="Vertical" 
-                                        Minimum="1000" 
-                                        Maximum="4400" 
-                                        Height="200"/>
-                                    <StackPanel Spacing="4" Margin="0,8,0,0">
-                                        <TextBlock Text="CPU Temp" Opacity="0.8" FontSize="12"/>
-                                        <TextBox Text="75" HorizontalAlignment="Stretch"/>
-                                        <TextBlock Text="GPU Temp" Opacity="0.8" FontSize="12" Margin="0,4,0,0"/>
-                                        <TextBox Text="65" HorizontalAlignment="Stretch"/>
-                                    </StackPanel>
+                            <!-- Fan 1 Column -->
+                            <StackPanel Spacing="8" Width="80">
+                                <TextBlock Text="Point" HorizontalAlignment="Center"/>
+                                <Slider Value="1000" 
+                                    SmallChange="100" 
+                                    LargeChange="500"
+                                    Orientation="Vertical" 
+                                    Minimum="1000" 
+                                    StepFrequency="100"
+                                    Maximum="4400" 
+                                    Height="200"/>
+                                <StackPanel Spacing="4" Margin="0,8,0,0">
+                                    <TextBlock Text="CPU Temp" Opacity="0.8" FontSize="12"/>
+                                    <muxc:NumberBox Value="20" 
+                                        Minimum="0"
+                                        Maximum="100"
+                                        SmallChange="1"
+                                        SpinButtonPlacementMode="Compact"
+                                        HorizontalAlignment="Center"/>
+                                    <TextBlock Text="GPU Temp" Opacity="0.8" FontSize="12" Margin="0,4,0,0"/>
+                                    <muxc:NumberBox Value="20" 
+                                            Minimum="0"
+                                            Maximum="100"
+                                            SmallChange="1"
+                                            SpinButtonPlacementMode="Compact"
+                                            HorizontalAlignment="Center"/>
                                 </StackPanel>
                             </StackPanel>
-                        </ScrollViewer>
 
-                        <!-- Advanced Settings -->
-                        <Expander Grid.Row="2" 
-                              Header="Advanced Settings"
-                              IsExpanded="False"
-                              Margin="0,12,0,0">
+                            <!-- Fan 2 Column -->
+                            <StackPanel Spacing="8" Width="80">
+                                <TextBlock Text="Point 2" HorizontalAlignment="Center"/>
+                                <Slider Value="3700" 
+                                    SmallChange="100" 
+                                    LargeChange="500"
+                                    Orientation="Vertical" 
+                                    StepFrequency="100"
+                                    Minimum="1000" 
+                                    Maximum="4400" 
+                                    Height="200"/>
+                                <StackPanel Spacing="4" Margin="0,8,0,0">
+                                    <TextBlock Text="CPU Temp" Opacity="0.8" FontSize="12"/>
+                                    <muxc:NumberBox Value="65" 
+                                        Minimum="0"
+                                        Maximum="100"
+                                        SmallChange="1"
+                                        SpinButtonPlacementMode="Compact"
+                                        HorizontalAlignment="Center"/>
+                                    <TextBlock Text="GPU Temp" Opacity="0.8" FontSize="12" Margin="0,4,0,0"/>
+                                    <muxc:NumberBox Value="55" 
+                                            Minimum="0"
+                                            Maximum="100"
+                                            SmallChange="1"
+                                            SpinButtonPlacementMode="Compact"
+                                            HorizontalAlignment="Center"/>
+                                </StackPanel>
+                            </StackPanel>
+
+                            <!-- Fan 3 Column -->
+                            <StackPanel Spacing="8" Width="80">
+                                <TextBlock Text="Point 3" HorizontalAlignment="Center"/>
+                                <Slider Value="4000" 
+                                    SmallChange="100" 
+                                    LargeChange="500"
+                                    Orientation="Vertical" 
+                                    StepFrequency="100"
+                                    Minimum="1000" 
+                                    Maximum="4400" 
+                                    Height="200"/>
+                                <StackPanel Spacing="4" Margin="0,8,0,0">
+                                    <TextBlock Text="CPU Temp" Opacity="0.8" FontSize="12"/>
+                                    <muxc:NumberBox Value="70" 
+                                        Minimum="0"
+                                        Maximum="100"
+                                        SmallChange="1"
+                                        SpinButtonPlacementMode="Compact"
+                                        HorizontalAlignment="Center"/>
+                                    <TextBlock Text="GPU Temp" Opacity="0.8" FontSize="12" Margin="0,4,0,0"/>
+                                    <muxc:NumberBox Value="60" 
+                                        Minimum="0"
+                                        Maximum="100"
+                                        SmallChange="1"
+                                        SpinButtonPlacementMode="Compact"
+                                        HorizontalAlignment="Center"/>
+                                </StackPanel>
+                            </StackPanel>
+
+                            <!-- Fan 4 Column -->
+                            <StackPanel Spacing="8" Width="80">
+                                <TextBlock Text="Point 4" HorizontalAlignment="Center"/>
+                                <Slider Value="4100" 
+                                    SmallChange="100" 
+                                    LargeChange="500"
+                                    Orientation="Vertical" 
+                                    StepFrequency="100"
+                                    Minimum="1000" 
+                                    Maximum="4400" 
+                                    Height="200"/>
+                                <StackPanel Spacing="4" Margin="0,8,0,0">
+                                    <TextBlock Text="CPU Temp" Opacity="0.8" FontSize="12"/>
+                                    <muxc:NumberBox Value="75" 
+                                        Minimum="0"
+                                        Maximum="100"
+                                        SmallChange="1"
+                                        SpinButtonPlacementMode="Compact"
+                                        HorizontalAlignment="Center"/>
+                                    <TextBlock Text="GPU Temp" Opacity="0.8" FontSize="12" Margin="0,4,0,0"/>
+                                    <muxc:NumberBox Value="65" 
+                                        Minimum="0"
+                                        Maximum="100"
+                                        SmallChange="1"
+                                        SpinButtonPlacementMode="Compact"
+                                        HorizontalAlignment="Center"/>
+                                </StackPanel>
+                            </StackPanel>
+                            <!-- Fan 5 Column -->
+                            <StackPanel Spacing="8" Width="80">
+                                <TextBlock Text="Point 5" HorizontalAlignment="Center"/>
+                                <Slider Value="4400" 
+                                        SmallChange="100" 
+                                        LargeChange="500"
+                                        Orientation="Vertical" 
+                                        StepFrequency="100"
+                                        Minimum="1000" 
+                                        Maximum="4400" 
+                                        Height="200"/>
+                                <StackPanel Spacing="4" Margin="0,8,0,0">
+                                    <TextBlock Text="CPU Temp" Opacity="0.8" FontSize="12"/>
+                                    <muxc:NumberBox Value="80" 
+                                            Minimum="0"
+                                            Maximum="100"
+                                            SmallChange="1"
+                                            SpinButtonPlacementMode="Compact"
+                                            HorizontalAlignment="Center"/>
+                                    <TextBlock Text="GPU Temp" Opacity="0.8" FontSize="12" Margin="0,4,0,0"/>
+                                    <muxc:NumberBox Value="65" 
+                                            Minimum="0"
+                                            Maximum="100"
+                                            SmallChange="1"
+                                            SpinButtonPlacementMode="Compact"
+                                            HorizontalAlignment="Center"/>
+                                </StackPanel>
+                            </StackPanel>
+                        </StackPanel>
+                    </ScrollViewer>
+
+                    <!-- Advanced Settings -->
+                    <Grid Grid.Row="2">
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="Auto"/>
+                        </Grid.RowDefinitions>
+
+                        <!--Expander -->
+                        <Expander Grid.Row="0"
+                                      Header="Advanced Settings"
+                                      IsExpanded="False"
+                                      Margin="0,12,0,0">
                             <StackPanel Spacing="12">
                                 <StackPanel Orientation="Horizontal" Spacing="24">
                                     <StackPanel>
@@ -196,25 +293,23 @@
 
                                 <StackPanel Orientation="Horizontal" Spacing="12">
                                     <Button Content="Turbo Mode" 
-                                        CornerRadius="4"
-                                        Background="{ThemeResource AccentButtonBackground}"/>
+                                                CornerRadius="4"
+                                                Background="{ThemeResource AccentButtonBackground}"/>
                                     <Button Content="Quiet Mode" 
-                                        CornerRadius="4"
-                                        Background="{ThemeResource ControlFillColorDefaultBrush}"/>
+                                                CornerRadius="4"
+                                                Background="{ThemeResource ControlFillColorDefaultBrush}"/>
                                 </StackPanel>
                             </StackPanel>
                         </Expander>
-
-                        <!-- Save Button -->
-                        <Button Content="Save Changes" 
-                            HorizontalAlignment="Right"
-                            Grid.Row="2"
-                            Margin="0,12,0,0"
-                            CornerRadius="4"
-                            Background="{ThemeResource AccentButtonBackground}"/>
+                        <Button Grid.Row="1"
+                                    Content="Save Changes" 
+                                    HorizontalAlignment="Right"
+                                    Margin="0,12,0,0"
+                                    CornerRadius="4"
+                                    Background="{ThemeResource AccentButtonBackground}"/>
                     </Grid>
-                </Border>
-            </Grid>
+                </Grid>
+            </Border>
         </Grid>
     </Grid>
 </Window>

@@ -42,9 +42,15 @@ namespace Lenovo_Fan_Controller
         protected override void OnLaunched(Microsoft.UI.Xaml.LaunchActivatedEventArgs args)
         {
             m_window = new MainWindow();
-            m_window.Activate();
+            m_window.ExtendsContentIntoTitleBar = true;
+            if (m_window.Content is FrameworkElement rootElement)
+            {
+                m_window.SetTitleBar(rootElement.FindName("AppTitleBar") as UIElement);
+            }
+        m_window.Activate();
         }
 
         private Window? m_window;
+
     }
 }

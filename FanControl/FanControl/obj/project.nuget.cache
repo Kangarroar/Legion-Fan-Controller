@@ -1,0 +1,12 @@
+{
+  "version": 2,
+  "dgSpecHash": "IJ7W3HmxS88=",
+  "success": true,
+  "projectFilePath": "C:\\Users\\Pedro\\source\\repos\\Lenovo Fan Controller\\FanControl\\FanControl\\FanControl.csproj",
+  "expectedPackageFiles": [
+    "C:\\Users\\Pedro\\.nuget\\packages\\system.codedom\\8.0.0\\system.codedom.8.0.0.nupkg.sha512",
+    "C:\\Users\\Pedro\\.nuget\\packages\\system.management\\8.0.0\\system.management.8.0.0.nupkg.sha512",
+    "C:\\Users\\Pedro\\.nuget\\packages\\microsoft.windows.sdk.net.ref\\10.0.19041.57\\microsoft.windows.sdk.net.ref.10.0.19041.57.nupkg.sha512"
+  ],
+  "logs": []
+}

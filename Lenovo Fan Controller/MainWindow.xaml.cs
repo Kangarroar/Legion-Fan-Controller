@@ -22,7 +22,7 @@ namespace Lenovo_Fan_Controller
 
             var displayArea = DisplayArea.GetFromWindowId(windowId, DisplayAreaFallback.Primary);
             var width = 800;
-            var height = 650;
+            var height = 750;
             appWindow.MoveAndResize(new Windows.Graphics.RectInt32(
                 (displayArea.WorkArea.Width - width) / 2,
                 (displayArea.WorkArea.Height - height) / 2,
