@@ -16,6 +16,7 @@ namespace Lenovo_Fan_Controller
             this.InitializeComponent();
             InitializePaths();
             InitializeConfigFiles();
+
         }
 
         private void InitializePaths()

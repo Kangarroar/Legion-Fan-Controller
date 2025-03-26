@@ -103,8 +103,8 @@
                               HorizontalAlignment="Right"
                               Width="120"
                               SelectedIndex="0">
-                            <ComboBoxItem x:Name="Legion5th" Content="Legion 5th"/>
-                            <ComboBoxItem x:Name="Legion6th" Content="Legion 6th"/>
+                            <ComboBoxItem Tag="5" Content="Legion 5th"/>
+                            <ComboBoxItem Tag="6" Content="Legion 6th"/>
                             <ToolTipService.ToolTip>
                                 <ToolTip Content="Select your Lenovo Legion Generation." VerticalOffset="-60"/>
                             </ToolTipService.ToolTip>
@@ -307,6 +307,13 @@
                                     Margin="0,12,0,0"
                                     CornerRadius="4"
                                     Background="{ThemeResource AccentButtonBackground}"/>
+                        <muxc:ProgressRing x:Name="ProgressRing" 
+                               Width="60" 
+                               Height="60"
+                               Visibility="Collapsed"
+                               HorizontalAlignment="Center"
+                               VerticalAlignment="Center"
+                               IsActive="True"/>
                     </Grid>
                 </Grid>
             </Border>

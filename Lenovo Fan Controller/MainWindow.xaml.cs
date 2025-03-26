@@ -55,21 +55,48 @@ namespace Lenovo_Fan_Controller
         }
         private async Task InitializeWhenReadyAsync()
         {
-            // Wait until window is fully activated
             while (!_isWindowReady)
             {
                 await Task.Delay(50);
             }
 
-            // Now safe to load config
             try
             {
-                LoadInitialConfig();
+                // Detect current power mode
+                var powerMode = PowerModeHelper.GetCurrentPowerMode();
+                currentProfile = PowerModeHelper.PowerModeToProfile(powerMode);
+
+                // Load the corresponding config
+                string configPath = currentProfile switch
+                {
+                    "performance" => App.PerformanceConfigPath,
+                    "quiet" => App.QuietConfigPath,
+                    _ => App.BalancedConfigPath
+                };
+
+                LoadConfig(configPath);
+
+                // Update UI to reflect current profile
+                SetActiveProfileUI(currentProfile);
             }
             catch (Exception ex)
             {
                 await ShowDialogSafeAsync("Initialization Error",
-                    $"Failed to load initial configuration: {ex.Message}");
+                    $"Failed to detect power mode: {ex.Message}");
+                // Fallback to balanced
+                LoadConfig(App.BalancedConfigPath);
+            }
+        }
+
+        private void SetActiveProfileUI(string profile)
+        {
+            foreach (NavigationViewItem item in NavigationView.MenuItems)
+            {
+                if (item.Tag.ToString() == profile)
+                {
+                    NavigationView.SelectedItem = item;
+                    break;
+                }
             }
         }
 
@@ -118,15 +145,27 @@ namespace Lenovo_Fan_Controller
             LoadConfig(App.BalancedConfigPath);
             DeviceSelector.SelectedIndex = currentConfig.LegionGeneration == 5 ? 0 : 1;
         }
+        private void UpdateDeviceSelector()//
+        {
+            if (DeviceSelector == null || currentConfig == null) return;
 
+            try
+            {
+                DeviceSelector.SelectedIndex = currentConfig.LegionGeneration == 5 ? 0 : 1;
+                Debug.WriteLine($"Updated DeviceSelector to generation: {currentConfig.LegionGeneration}");
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"Error updating DeviceSelector: {ex.Message}");
+            }
+        }
         private void LoadConfig(string configPath)
         {
             try
             {
                 if (!File.Exists(configPath))
                 {
-                    var defaultConfig = GetDefaultConfigContent();
-                    File.WriteAllText(configPath, defaultConfig);
+                    File.WriteAllText(configPath, GetDefaultConfigContent());
                 }
 
                 var lines = File.ReadAllLines(configPath)
@@ -135,17 +174,22 @@ namespace Lenovo_Fan_Controller
 
                 currentConfig = ParseConfig(lines);
                 UpdateUI();
+
+                UpdateDeviceSelector();
             }
             catch (Exception ex)
             {
                 _ = ShowDialogSafeAsync("Config Error", $"Failed to load config: {ex.Message}");
-                currentConfig = CreateDefaultConfig(); // Fallback to defaults
+                currentConfig = CreateDefaultConfig();
+                UpdateDeviceSelector(); 
             }
         }
 
         private FanConfig ParseConfig(string[] lines)
         {
+            
             return new FanConfig
+              
             {
                 //TODO: Check if Legion Gen 5 or 6th
                 //      Check if sys has info about max rpm for fans to automatically set the max.
@@ -266,6 +310,7 @@ hst_temps_ramp_down : 10 48 53 63 68";
 
             AccVal.Value = currentConfig.AccelerationValue;
             DecVal.Value = currentConfig.DecelerationValue;
+            UpdateDeviceSelector();
 
             ProfileText.Text = $"Profile: \"{currentProfile.ToUpper()}\"";
         }
@@ -274,6 +319,7 @@ hst_temps_ramp_down : 10 48 53 63 68";
         {
             try
             {
+                currentConfig.FanCurvePoints = 5;
                 // Update fan RPMs and acceleration values
                 currentConfig.FanRpmPoints = new[] {
             (int)Slider1.Value, (int)Slider2.Value,
@@ -362,25 +408,107 @@ hst_temps_ramp_down : {string.Join(" ", gpuRampDown)}";
             };
             await dialog.ShowAsync();
         }
-
-        private void NavigationView_SelectionChanged(NavigationView sender, NavigationViewSelectionChangedEventArgs args)
+        private void RestartFanControl()
         {
-            if (args.SelectedItem is NavigationViewItem item)
+            try
             {
-                currentProfile = item.Tag.ToString();
-                string configPath = currentProfile switch
+                foreach (var process in Process.GetProcessesByName("FanControl"))
                 {
-                    "performance" => App.PerformanceConfigPath,
-                    "quiet" => App.QuietConfigPath,
-                    _ => App.BalancedConfigPath
+                    try
+                    {
+                        process.Kill();
+                        process.WaitForExit(1000);
+                    }
+                    catch (Exception ex)
+                    {
+                        Debug.WriteLine($"Error killing process: {ex.Message}");
+                    }
+                }
+                var startInfo = new ProcessStartInfo
+                {
+                    FileName = App.FanControlPath,
+                    UseShellExecute = false,
+                    CreateNoWindow = true,
+                    WindowStyle = ProcessWindowStyle.Hidden
                 };
-                LoadConfig(configPath);
+
+                Process.Start(startInfo);
             }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"FanControl restart failed: {ex.Message}");
+                // Optionally show a user-friendly message
+                ShowErrorDialog("Fan Control Error", $"Failed to restart fan control: {ex.Message}");
+            }
+        }
+        private async void NavigationView_SelectionChanged(NavigationView sender, NavigationViewSelectionChangedEventArgs args)
+        {
+            if (args.SelectedItem is NavigationViewItem selectedItem)
+            {
+                string newProfile = selectedItem.Tag.ToString();
+                var powerMode = newProfile switch
+                {
+                    "quiet" => PowerModeHelper.LegionPowerMode.Quiet,
+                    "performance" => PowerModeHelper.LegionPowerMode.Performance,
+                    _ => PowerModeHelper.LegionPowerMode.Balanced
+                };
+
+                SetLoadingState(true);
+
+                try
+                {
+                    bool success = PowerModeHelper.SetPowerMode(powerMode);
+
+                    if (!success)
+                    {
+                        await ShowDialogSafeAsync("Error",
+                            "Failed to change power mode. Please ensure:\n" +
+                            "1. You're running as Administrator\n" +
+                            "2. Lenovo Vantage/WMI services are running\n" +
+                            "3. Your model supports power mode switching");
+
+                        // Revert UI to current actual mode
+                        var actualMode = PowerModeHelper.GetCurrentPowerMode();
+                        string actualProfile = PowerModeHelper.PowerModeToProfile(actualMode);
+                        sender.SelectedItem = NavigationView.MenuItems
+                            .OfType<NavigationViewItem>()
+                            .FirstOrDefault(item => item.Tag.ToString() == actualProfile);
+                        return;
+                    }
+
+                    currentProfile = newProfile;
+                    string configPath = newProfile switch
+                    {
+                        "performance" => App.PerformanceConfigPath,
+                        "quiet" => App.QuietConfigPath,
+                        _ => App.BalancedConfigPath
+                    };
+
+                    LoadConfig(configPath);
+                    RestartFanControl();
+                }
+                finally
+                {
+                    SetLoadingState(false);
+                }
+            }
+        }
+
+        private void SetLoadingState(bool isLoading)
+        {
+            // Visual feedback during mode change
+            ProgressRing.Visibility = isLoading ? Visibility.Visible : Visibility.Collapsed;
+            NavigationView.IsEnabled = !isLoading;
         }
 
         private void DeviceSelector_SelectionChanged(object sender, SelectionChangedEventArgs e)
         {
-            currentConfig.LegionGeneration = DeviceSelector.SelectedIndex == 0 ? 5 : 6;
+            if (DeviceSelector.SelectedItem is ComboBoxItem selectedItem && currentConfig != null)
+            {
+                currentConfig.LegionGeneration = selectedItem.Content.ToString().Contains("5th") ? 5 : 6;
+                Debug.WriteLine($"User selected Legion Generation: {currentConfig.LegionGeneration}");
+
+            }
         }
 
         private void Save_Click(object sender, RoutedEventArgs e) => SaveConfig();
@@ -419,6 +547,7 @@ hst_temps_ramp_down : {string.Join(" ", gpuRampDown)}";
             originalRpmValues[4] = (int)Slider5.Value;
 
             // Set all fans to max RPM (4400) LEGION 5 15ANH05
+            // I cant find tech information about the max rpm of 5th and 6th gen, thanks lenovo
             Slider1.Value = 4400;
             Slider2.Value = 4400;
             Slider3.Value = 4400;
@@ -427,6 +556,7 @@ hst_temps_ramp_down : {string.Join(" ", gpuRampDown)}";
 
             turboEnabled = true;
             Turbo.Background = new SolidColorBrush(Colors.Red);
+            SaveConfig();
         }
 
         private void Turbo_Unchecked(object sender, RoutedEventArgs e)
@@ -440,6 +570,7 @@ hst_temps_ramp_down : {string.Join(" ", gpuRampDown)}";
 
             turboEnabled = false;
             Turbo.Background = new SolidColorBrush(Colors.Transparent);
+            SaveConfig();
         }
     }
 }
