@@ -2,6 +2,7 @@ using Microsoft.UI;
 using Microsoft.UI.Windowing;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
+using Microsoft.UI.Xaml.Input;
 using Microsoft.UI.Xaml.Media;
 using System;
 using System.Diagnostics;
@@ -9,7 +10,9 @@ using System.IO;
 using System.Linq;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
+using System.Windows.Input;
 using WinRT.Interop;
+using H.NotifyIcon;
 
 namespace Lenovo_Fan_Controller
 {
@@ -19,32 +22,109 @@ namespace Lenovo_Fan_Controller
         private string currentProfile = "default";
         private XamlRoot _xamlRoot;
         private bool _isWindowReady = false;
+        private AppWindow _appWindow;
+        private bool _isWindowVisible = true;
+        private bool _isExiting = false;
+
+        // left click tray
+        public ICommand ShowHideWindowCommand { get; }
 
         public MainWindow()
         {
+            // Initialize command
+            ShowHideWindowCommand = new RelayCommand(ShowHideWindow);
+
             this.InitializeComponent();
             this.Activated += MainWindow_Activated;
+            this.Closed += MainWindow_Closed;
             SetWindowProperties();
             SetupEventHandlers();
 
             // Start initialization when window is ready
             _ = InitializeWhenReadyAsync();
         }
+        // Hijack close event
+        private void MainWindow_Closed(object sender, WindowEventArgs args)
+        {
+            if (_isExiting)
+            {
+                TrayIcon?.Dispose();
+                return;
+            }
+
+            args.Handled = true;
+            HideWindow();
+        }
 
         private void SetWindowProperties()
         {
             var hWnd = WindowNative.GetWindowHandle(this);
             var windowId = Win32Interop.GetWindowIdFromWindow(hWnd);
-            var appWindow = AppWindow.GetFromWindowId(windowId);
+            _appWindow = AppWindow.GetFromWindowId(windowId);
 
             var displayArea = DisplayArea.GetFromWindowId(windowId, DisplayAreaFallback.Primary);
             var width = 850;
             var height = 780;
-            appWindow.MoveAndResize(new Windows.Graphics.RectInt32(
+            _appWindow.MoveAndResize(new Windows.Graphics.RectInt32(
                 (displayArea.WorkArea.Width - width) / 2,
                 (displayArea.WorkArea.Height - height) / 2,
                 width,
                 height));
+            _appWindow.Changed += AppWindow_Changed;
+        }
+
+        private void AppWindow_Changed(AppWindow sender, AppWindowChangedEventArgs args)
+        {
+            if (args.DidPresenterChange && _appWindow.Presenter.Kind == AppWindowPresenterKind.CompactOverlay)
+            {
+                return;
+            }
+            if (args.DidSizeChange || args.DidPresenterChange)
+            {
+                // WinUI doesn't have a direct "IsMinimized" property
+            }
+        }
+
+        private void ShowHideMenuItem_Click(object sender, RoutedEventArgs e)
+        {
+            ShowHideWindow();
+        }
+
+        private void ExitMenuItem_Click(object sender, RoutedEventArgs e)
+        {
+            _isExiting = true;
+            this.Close();
+        }
+
+        private void ShowHideWindow()
+        {
+            if (_isWindowVisible)
+            {
+                HideWindow();
+            }
+            else
+            {
+                ShowWindow();
+            }
+        }
+
+        private void HideWindow()
+        {
+            _isWindowVisible = false;
+            ShowHideMenuItem.Text = "Show Window";
+
+            var hWnd = WindowNative.GetWindowHandle(this);
+            User32.ShowWindow(hWnd, User32.SW_HIDE);
+        }
+
+        private void ShowWindow()
+        {
+            _isWindowVisible = true;
+            ShowHideMenuItem.Text = "Hide Window";
+
+            var hWnd = WindowNative.GetWindowHandle(this);
+            User32.ShowWindow(hWnd, User32.SW_SHOW);
+            this.Activate();
         }
         private void SetupEventHandlers()
         {
@@ -84,7 +164,7 @@ namespace Lenovo_Fan_Controller
                 await ShowDialogSafeAsync("Initialization Error",
                     $"Failed to detect power mode: {ex.Message}");
                 // Fallback to balanced
-                LoadConfig(App.BalancedConfigPath);
+                LoadConfig(App.BalancedConfigPath); 
             }
         }
 
@@ -329,7 +409,7 @@ hst_temps_ramp_down : 10 48 53 63 68";
                 currentConfig.AccelerationValue = (int)AccVal.Value;
                 currentConfig.DecelerationValue = (int)DecVal.Value;
 
-                // Update from UI °
+                // Update from UI ï¿½
                 currentConfig.CpuTempsRampUp = new[] {
             (int)CpuTemp1.Value, (int)CpuTemp2.Value,
             (int)CpuTemp3.Value, (int)CpuTemp4.Value,
@@ -363,7 +443,7 @@ hst_temps_ramp_down : 10 48 53 63 68";
         }
         private string GenerateConfigContent()
         {
-            // Auto-calc 3°C lower than ramp_up
+            // Auto-calc 3ï¿½C lower than ramp_up
             int[] cpuRampDown = currentConfig.CpuTempsRampUp.Select(t => Math.Max(0, t - 3)).ToArray();
             int[] gpuRampDown = currentConfig.GpuTempsRampUp.Select(t => Math.Max(0, t - 3)).ToArray();
 
@@ -572,6 +652,48 @@ hst_temps_ramp_down : {string.Join(" ", gpuRampDown)}";
             turboEnabled = false;
             Turbo.Background = new SolidColorBrush(Colors.Transparent);
             SaveConfig();
+        }
+    }
+
+    // Helper class for window show/hide operations
+    internal static class User32
+    {
+        public const int SW_HIDE = 0;
+        public const int SW_SHOW = 5;
+        public const int SW_MINIMIZE = 6;
+        public const int SW_RESTORE = 9;
+
+        [System.Runtime.InteropServices.DllImport("user32.dll")]
+        public static extern bool ShowWindow(IntPtr hWnd, int nCmdShow);
+    }
+
+    // Simple relay command implementation
+    public class RelayCommand : ICommand
+    {
+        private readonly Action _execute;
+        private readonly Func<bool>? _canExecute;
+
+        public RelayCommand(Action execute, Func<bool>? canExecute = null)
+        {
+            _execute = execute ?? throw new ArgumentNullException(nameof(execute));
+            _canExecute = canExecute;
+        }
+
+        public event EventHandler? CanExecuteChanged;
+
+        public bool CanExecute(object? parameter)
+        {
+            return _canExecute == null || _canExecute();
+        }
+
+        public void Execute(object? parameter)
+        {
+            _execute();
+        }
+
+        public void RaiseCanExecuteChanged()
+        {
+            CanExecuteChanged?.Invoke(this, EventArgs.Empty);
         }
     }
 }

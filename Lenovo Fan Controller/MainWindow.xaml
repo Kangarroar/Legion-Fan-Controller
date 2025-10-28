@@ -5,6 +5,7 @@
     xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
     xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
     xmlns:muxc="using:Microsoft.UI.Xaml.Controls"
+    xmlns:tb="using:H.NotifyIcon"
     mc:Ignorable="d"
     Title="Legion Fan Controller">
 
@@ -318,5 +319,27 @@
                 </Grid>
             </Border>
         </Grid>
+
+        <!-- System Tray Icon -->
+        <tb:TaskbarIcon
+            x:Name="TrayIcon"
+            ToolTipText="Legion Fan Controller"
+            IconSource="/Assets/ico.ico"
+            ContextMenuMode="SecondWindow"
+            NoLeftClickDelay="True"
+            LeftClickCommand="{x:Bind ShowHideWindowCommand}">
+            <tb:TaskbarIcon.ContextFlyout>
+                <MenuFlyout>
+                    <MenuFlyoutItem
+                        x:Name="ShowHideMenuItem"
+                        Text="Show Window"
+                        Click="ShowHideMenuItem_Click" />
+                    <MenuFlyoutSeparator />
+                    <MenuFlyoutItem
+                        Text="Exit"
+                        Click="ExitMenuItem_Click" />
+                </MenuFlyout>
+            </tb:TaskbarIcon.ContextFlyout>
+        </tb:TaskbarIcon>
     </Grid>
 </Window>
