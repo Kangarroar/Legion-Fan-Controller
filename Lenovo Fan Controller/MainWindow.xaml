@@ -329,11 +329,16 @@
             NoLeftClickDelay="True"
             LeftClickCommand="{x:Bind ShowHideWindowCommand}">
             <tb:TaskbarIcon.ContextFlyout>
-                <MenuFlyout>
+                <MenuFlyout Opening="ContextMenu_Opening">
                     <MenuFlyoutItem
                         x:Name="ShowHideMenuItem"
                         Text="Show Window"
                         Click="ShowHideMenuItem_Click" />
+                    <MenuFlyoutSeparator />
+                    <ToggleMenuFlyoutItem
+                        x:Name="StartupMenuItem"
+                        Text="Run at Windows startup"
+                        Click="StartupMenuItem_Click" />
                     <MenuFlyoutSeparator />
                     <MenuFlyoutItem
                         Text="Exit"

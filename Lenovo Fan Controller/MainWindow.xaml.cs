@@ -39,9 +39,16 @@ namespace Lenovo_Fan_Controller
             this.Closed += MainWindow_Closed;
             SetWindowProperties();
             SetupEventHandlers();
+            CheckStartupStatus();
 
             // Start initialization when window is ready
             _ = InitializeWhenReadyAsync();
+        }
+
+        private void CheckStartupStatus()
+        {
+            // Update the startup menu item state
+            StartupMenuItem.IsChecked = StartupManager.IsStartupEnabled();
         }
         // Hijack close event
         private void MainWindow_Closed(object sender, WindowEventArgs args)
@@ -85,9 +92,62 @@ namespace Lenovo_Fan_Controller
             }
         }
 
+        private void ContextMenu_Opening(object sender, object e)
+        {
+            // Update menu items to reflect current state
+            CheckStartupStatus();
+            ShowHideMenuItem.Text = _isWindowVisible ? "Hide Window" : "Show Window";
+        }
+
         private void ShowHideMenuItem_Click(object sender, RoutedEventArgs e)
         {
             ShowHideWindow();
+        }
+
+        private async void StartupMenuItem_Click(object sender, RoutedEventArgs e)
+        {
+            try
+            {
+                bool success;
+                if (StartupMenuItem.IsChecked)
+                {
+                    // Enable startup
+                    success = StartupManager.EnableStartup();
+                    if (success)
+                    {
+                        await ShowDialogSafeAsync("Startup Enabled", 
+                            "Legion Fan Controller will now start automatically when Windows boots.\n\n" +
+                            "You can disable this anytime from the tray icon menu or Task Manager's Startup tab.");
+                    }
+                    else
+                    {
+                        StartupMenuItem.IsChecked = false;
+                        await ShowDialogSafeAsync("Error", 
+                            "Failed to enable startup. Please make sure the application is running as Administrator.");
+                    }
+                }
+                else
+                {
+                    // Disable startup
+                    success = StartupManager.DisableStartup();
+                    if (success)
+                    {
+                        await ShowDialogSafeAsync("Startup Disabled", 
+                            "Legion Fan Controller will no longer start automatically with Windows.");
+                    }
+                    else
+                    {
+                        StartupMenuItem.IsChecked = true;
+                        await ShowDialogSafeAsync("Error", 
+                            "Failed to disable startup. Please make sure the application is running as Administrator.");
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                await ShowDialogSafeAsync("Error", $"Failed to change startup setting: {ex.Message}");
+                CheckStartupStatus(); // Revert to actual state
+            }
         }
 
         private void ExitMenuItem_Click(object sender, RoutedEventArgs e)
