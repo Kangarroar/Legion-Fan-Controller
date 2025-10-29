@@ -49,7 +49,7 @@ namespace Lenovo_Fan_Controller
         /// <summary>
         /// Enables startup on Windows boot
         /// </summary>
-        public static bool EnableStartup() // Need to implement tray-ed mode by default
+        public static bool EnableStartup() // Minimized
         {
             try
             {
@@ -67,7 +67,7 @@ namespace Lenovo_Fan_Controller
 
                 DisableStartup();
 
-                // XML
+                // XML 
                 var xml = $@"<?xml version=""1.0"" encoding=""UTF-16""?>
 <Task version=""1.2"" xmlns=""http://schemas.microsoft.com/windows/2004/02/mit/task"">
   <RegistrationInfo>
@@ -108,6 +108,7 @@ namespace Lenovo_Fan_Controller
   <Actions Context=""Author"">
     <Exec>
       <Command>{exePath}</Command>
+      <Arguments>/minimized</Arguments>
     </Exec>
   </Actions>
 </Task>";

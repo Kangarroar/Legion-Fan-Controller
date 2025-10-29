@@ -41,13 +41,34 @@ namespace Lenovo_Fan_Controller
             SetupEventHandlers();
             CheckStartupStatus();
 
-            // Start initialization when window is ready
+            // Start minimized
+            CheckStartMinimized();
+
+
             _ = InitializeWhenReadyAsync();
+        }
+
+        private void CheckStartMinimized()
+        {
+            var args = Environment.GetCommandLineArgs();
+            if (args.Length > 1 && args[1].Equals("/minimized", StringComparison.OrdinalIgnoreCase))
+            {
+                _ = HideWindowAfterReadyAsync();
+            }
+        }
+
+        private async Task HideWindowAfterReadyAsync()
+        {
+            while (!_isWindowReady)
+            {
+                await Task.Delay(50);
+            }
+            await Task.Delay(200);
+            HideWindow();
         }
 
         private void CheckStartupStatus()
         {
-            // Update the startup menu item state
             StartupMenuItem.IsChecked = StartupManager.IsStartupEnabled();
         }
         // Hijack close event
@@ -150,6 +171,13 @@ namespace Lenovo_Fan_Controller
             }
         }
 
+        private async void ResetFirstRunMenuItem_Click(object sender, RoutedEventArgs e)
+        {
+            FirstRunHelper.ResetFirstRun();
+            await ShowDialogSafeAsync("First Run Reset", 
+                "Set");
+        }
+
         private void ExitMenuItem_Click(object sender, RoutedEventArgs e)
         {
             _isExiting = true;
@@ -199,6 +227,8 @@ namespace Lenovo_Fan_Controller
             {
                 await Task.Delay(50);
             }
+
+            await FirstRunHelper.ShowFirstRunWarning(this);
 
             try
             {
