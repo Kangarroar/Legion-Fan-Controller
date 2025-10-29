@@ -1,0 +1,9 @@
+C:\Users\Pedro\Source\Repos\LegionGen5-6FanControl_WinRing_Smokeless_I-OPortsMethod\FanControl\FanControl\bin\Release\net8.0-windows10.0.17763.0\publish\FanControl.exe
+C:\Users\Pedro\Source\Repos\LegionGen5-6FanControl_WinRing_Smokeless_I-OPortsMethod\FanControl\FanControl\bin\Release\net8.0-windows10.0.17763.0\publish\FanControl.dll
+C:\Users\Pedro\Source\Repos\LegionGen5-6FanControl_WinRing_Smokeless_I-OPortsMethod\FanControl\FanControl\bin\Release\net8.0-windows10.0.17763.0\publish\FanControl.deps.json
+C:\Users\Pedro\Source\Repos\LegionGen5-6FanControl_WinRing_Smokeless_I-OPortsMethod\FanControl\FanControl\bin\Release\net8.0-windows10.0.17763.0\publish\FanControl.runtimeconfig.json
+C:\Users\Pedro\Source\Repos\LegionGen5-6FanControl_WinRing_Smokeless_I-OPortsMethod\FanControl\FanControl\bin\Release\net8.0-windows10.0.17763.0\publish\FanControl.pdb
+C:\Users\Pedro\Source\Repos\LegionGen5-6FanControl_WinRing_Smokeless_I-OPortsMethod\FanControl\FanControl\bin\Release\net8.0-windows10.0.17763.0\publish\Microsoft.Windows.SDK.NET.dll
+C:\Users\Pedro\Source\Repos\LegionGen5-6FanControl_WinRing_Smokeless_I-OPortsMethod\FanControl\FanControl\bin\Release\net8.0-windows10.0.17763.0\publish\WinRT.Runtime.dll
+C:\Users\Pedro\Source\Repos\LegionGen5-6FanControl_WinRing_Smokeless_I-OPortsMethod\FanControl\FanControl\bin\Release\net8.0-windows10.0.17763.0\publish\System.Management.dll
+C:\Users\Pedro\Source\Repos\LegionGen5-6FanControl_WinRing_Smokeless_I-OPortsMethod\FanControl\FanControl\bin\Release\net8.0-windows10.0.17763.0\publish\runtimes\win\lib\net8.0\System.Management.dll
