@@ -18,6 +18,8 @@ namespace Lenovo_Fan_Controller
 {
     public sealed partial class MainWindow : Window
     {
+        // I CANT FOR THE LIFE OF ME FIGURE OUT WHY THE DEFAULT BUTTON IS NOT WORKING
+        // IT KEEPS BEING HIGHLIGHTED ALWAYS
         private FanConfig currentConfig;
         private string currentProfile = "default";
         private XamlRoot _xamlRoot;
@@ -255,7 +257,7 @@ namespace Lenovo_Fan_Controller
                 Content = stackPanel,
                 PrimaryButtonText = "Save",
                 CloseButtonText = "Cancel",
-                DefaultButton = ContentDialogButton.Primary,
+                DefaultButton = ContentDialogButton.Primary, 
                 XamlRoot = this.Content?.XamlRoot
             };
 
@@ -375,6 +377,7 @@ namespace Lenovo_Fan_Controller
                 };
 
                 LoadConfig(configPath);
+                RestartFanControl();
 
                 // Update UI to reflect current profile
                 SetActiveProfileUI(currentProfile);
@@ -388,7 +391,8 @@ namespace Lenovo_Fan_Controller
                 await ShowDialogSafeAsync("Initialization Error",
                     $"Failed to detect power mode: {ex.Message}");
                 // Fallback to balanced
-                LoadConfig(App.BalancedConfigPath); 
+                LoadConfig(App.BalancedConfigPath);
+                RestartFanControl(); 
             }
         }
 
