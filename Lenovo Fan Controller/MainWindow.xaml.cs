@@ -199,6 +199,121 @@ namespace Lenovo_Fan_Controller
             this.Close();
         }
 
+        private async void SettingsButton_Click(object sender, RoutedEventArgs e)
+        {
+            await ShowSettingsDialog();
+        }
+
+        private async Task ShowSettingsDialog()
+        {
+            // Create checkboxes for settings
+            var showGpuCheckBox = new CheckBox
+            {
+                Content = "Show GPU Temperature Controls",
+                IsChecked = SettingsManager.GetShowGpuTemp(),
+                Margin = new Thickness(0, 0, 0, 12)
+            };
+
+            var startMinimizedCheckBox = new CheckBox
+            {
+                Content = "Start Minimized to Tray",
+                IsChecked = SettingsManager.GetStartMinimized(),
+                Margin = new Thickness(0, 0, 0, 12),
+                Opacity = 1
+            };
+
+            var unlockMaxRpmCheckBox = new CheckBox
+            {
+                Content = "Unlock Max RPM (5000 RPM - DANGEROUS!)",
+                IsChecked = SettingsManager.GetUnlockMaxRpm(),
+                Margin = new Thickness(0, 0, 0, 4),
+                Foreground = new SolidColorBrush(Microsoft.UI.Colors.OrangeRed)
+            };
+
+            var warningText = new TextBlock
+            {
+                Text = "⚠️ Warning: Setting RPM values too high can damage your fans!",
+                TextWrapping = TextWrapping.Wrap,
+                FontSize = 12,
+                Opacity = 0.7,
+                Margin = new Thickness(24, 0, 0, 0)
+            };
+
+            var stackPanel = new StackPanel
+            {
+                Spacing = 8
+            };
+
+            stackPanel.Children.Add(showGpuCheckBox);
+            stackPanel.Children.Add(startMinimizedCheckBox);
+            stackPanel.Children.Add(unlockMaxRpmCheckBox);
+            stackPanel.Children.Add(warningText);
+
+            var dialog = new ContentDialog
+            {
+                Title = "Settings",
+                Content = stackPanel,
+                PrimaryButtonText = "Save",
+                CloseButtonText = "Cancel",
+                DefaultButton = ContentDialogButton.Primary,
+                XamlRoot = this.Content?.XamlRoot
+            };
+
+            var result = await dialog.ShowAsync();
+
+            if (result == ContentDialogResult.Primary)
+            {
+                // Save settings
+                bool showGpuChanged = SettingsManager.GetShowGpuTemp() != showGpuCheckBox.IsChecked;
+                bool maxRpmChanged = SettingsManager.GetUnlockMaxRpm() != unlockMaxRpmCheckBox.IsChecked;
+
+                SettingsManager.SetShowGpuTemp(showGpuCheckBox.IsChecked == true);
+                SettingsManager.SetStartMinimized(startMinimizedCheckBox.IsChecked == true);
+                SettingsManager.SetUnlockMaxRpm(unlockMaxRpmCheckBox.IsChecked == true);
+
+                // Apply settings immediately
+                if (showGpuChanged)
+                {
+                    ApplyGpuVisibilitySetting();
+                }
+
+                if (maxRpmChanged)
+                {
+                    ApplyMaxRpmSetting();
+                }
+
+                await ShowDialogSafeAsync("Settings Saved", "Your settings have been saved successfully.");
+            }
+        }
+
+        private void ApplyGpuVisibilitySetting()
+        {
+            bool showGpu = SettingsManager.GetShowGpuTemp();
+            var visibility = showGpu ? Visibility.Visible : Visibility.Collapsed;
+
+            GPU1.Visibility = visibility;
+            GpuTemp1.Visibility = visibility;
+            GPU2.Visibility = visibility;
+            GpuTemp2.Visibility = visibility;
+            GPU3.Visibility = visibility;
+            GpuTemp3.Visibility = visibility;
+            GPU4.Visibility = visibility;
+            GpuTemp4.Visibility = visibility;
+            GPU5.Visibility = visibility;
+            GpuTemp5.Visibility = visibility;
+        }
+
+        private void ApplyMaxRpmSetting()
+        {
+            int maxRpm = SettingsManager.GetMaxRpm();
+
+            Slider1.Maximum = maxRpm;
+            Slider2.Maximum = maxRpm;
+            Slider3.Maximum = maxRpm;
+            Slider4.Maximum = maxRpm;
+            Slider5.Maximum = maxRpm;
+        }
+
         private void ShowHideWindow()
         {
             if (_isWindowVisible)
@@ -263,6 +378,10 @@ namespace Lenovo_Fan_Controller
 
                 // Update UI to reflect current profile
                 SetActiveProfileUI(currentProfile);
+
+                // Apply saved settings
+                ApplyGpuVisibilitySetting();
+                ApplyMaxRpmSetting();
             }
             catch (Exception ex)
             {
