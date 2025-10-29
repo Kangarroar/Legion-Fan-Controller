@@ -44,7 +44,7 @@
                 Margin="0,0,12,0">
 
                 <muxc:NavigationView.MenuItems>
-                    <muxc:NavigationViewItem Content="Default" Tag="default" IsSelected="True">
+                    <muxc:NavigationViewItem Content="Default" Tag="default">
                         <muxc:NavigationViewItem.Icon>
                             <FontIcon Glyph="&#xE8F1;"/>
                         </muxc:NavigationViewItem.Icon>
