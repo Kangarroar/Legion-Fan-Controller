@@ -67,6 +67,10 @@ namespace Lenovo_Fan_Controller
 
                 DisableStartup();
 
+                // Start minimized
+                bool startMinimized = SettingsManager.GetStartMinimized();
+                string arguments = startMinimized ? "/minimized" : "";
+
                 // XML 
                 var xml = $@"<?xml version=""1.0"" encoding=""UTF-16""?>
 <Task version=""1.2"" xmlns=""http://schemas.microsoft.com/windows/2004/02/mit/task"">
@@ -108,7 +112,7 @@ namespace Lenovo_Fan_Controller
   <Actions Context=""Author"">
     <Exec>
       <Command>{exePath}</Command>
-      <Arguments>/minimized</Arguments>
+      <Arguments>{arguments}</Arguments>
     </Exec>
   </Actions>
 </Task>";
@@ -145,7 +149,6 @@ namespace Lenovo_Fan_Controller
             }
             catch (Exception ex)
             {
-                Debug.WriteLine($"Failed to enable startup: {ex.Message}");
                 return false;
             }
         }
@@ -178,7 +181,6 @@ namespace Lenovo_Fan_Controller
             }
             catch (Exception ex)
             {
-                Debug.WriteLine($"Failed to disable startup: {ex.Message}");
                 return false;
             }
         }

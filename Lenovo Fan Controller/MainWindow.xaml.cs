@@ -27,6 +27,7 @@ namespace Lenovo_Fan_Controller
         private AppWindow _appWindow;
         private bool _isWindowVisible = true;
         private bool _isExiting = false;
+        private bool _shouldStartMinimized = false;
 
         // left click tray
         public ICommand ShowHideWindowCommand { get; }
@@ -53,7 +54,17 @@ namespace Lenovo_Fan_Controller
         private void CheckStartMinimized()
         {
             var args = Environment.GetCommandLineArgs();
+        
             if (args.Length > 1 && args[1].Equals("/minimized", StringComparison.OrdinalIgnoreCase))
+            {
+                _shouldStartMinimized = true;
+            }
+            else if (SettingsManager.GetStartMinimized())
+            {
+                _shouldStartMinimized = true;
+            }
+            
+            if (_shouldStartMinimized)
             {
                 _ = HideWindowAfterReadyAsync();
             }
@@ -61,11 +72,14 @@ namespace Lenovo_Fan_Controller
 
         private async Task HideWindowAfterReadyAsync()
         {
+            // Hide immediately 
+            HideWindow();
             while (!_isWindowReady)
             {
                 await Task.Delay(50);
             }
-            await Task.Delay(200);
+            
+            await Task.Delay(100);
             HideWindow();
         }
 
@@ -265,10 +279,11 @@ namespace Lenovo_Fan_Controller
 
             if (result == ContentDialogResult.Primary)
             {
-                // Save settings
                 bool showGpuChanged = SettingsManager.GetShowGpuTemp() != showGpuCheckBox.IsChecked;
                 bool maxRpmChanged = SettingsManager.GetUnlockMaxRpm() != unlockMaxRpmCheckBox.IsChecked;
-
+                bool startMinimizedChanged = SettingsManager.GetStartMinimized() != startMinimizedCheckBox.IsChecked;
+                
+                // Save settings
                 SettingsManager.SetShowGpuTemp(showGpuCheckBox.IsChecked == true);
                 SettingsManager.SetStartMinimized(startMinimizedCheckBox.IsChecked == true);
                 SettingsManager.SetUnlockMaxRpm(unlockMaxRpmCheckBox.IsChecked == true);
@@ -282,6 +297,23 @@ namespace Lenovo_Fan_Controller
                 if (maxRpmChanged)
                 {
                     ApplyMaxRpmSetting();
+                }
+
+                // Update Task Scheduler if startup setting changed
+                if (startMinimizedChanged)
+                {
+                    try
+                    {
+                        if (StartupManager.IsStartupEnabled())
+                        {
+                            StartupManager.DisableStartup();
+                            StartupManager.EnableStartup();
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        Debug.WriteLine($"Failed to update Task Scheduler: {ex.Message}");
+                    }
                 }
 
                 await ShowDialogSafeAsync("Settings Saved", "Your settings have been saved successfully.");
@@ -413,6 +445,12 @@ namespace Lenovo_Fan_Controller
             _xamlRoot = this.Content.XamlRoot;
             _isWindowReady = true;
             this.Activated -= MainWindow_Activated;
+            
+            // If we should start minimized, hide the window again
+            if (_shouldStartMinimized)
+            {
+                HideWindow();
+            }
         }
 
         private async Task ShowDialogSafeAsync(string title, string message)
@@ -460,11 +498,9 @@ namespace Lenovo_Fan_Controller
             try
             {
                 DeviceSelector.SelectedIndex = currentConfig.LegionGeneration == 5 ? 0 : 1;
-                Debug.WriteLine($"Updated DeviceSelector to generation: {currentConfig.LegionGeneration}");
             }
             catch (Exception ex)
             {
-                Debug.WriteLine($"Error updating DeviceSelector: {ex.Message}");
             }
         }
         private void LoadConfig(string configPath)
@@ -729,7 +765,6 @@ hst_temps_ramp_down : {string.Join(" ", gpuRampDown)}";
                     }
                     catch (Exception ex)
                     {
-                        Debug.WriteLine($"Error killing process: {ex.Message}");
                     }
                 }
                 var startInfo = new ProcessStartInfo
@@ -744,7 +779,6 @@ hst_temps_ramp_down : {string.Join(" ", gpuRampDown)}";
             }
             catch (Exception ex)
             {
-                Debug.WriteLine($"FanControl restart failed: {ex.Message}");
               
                 ShowErrorDialog("Fan Control Error", $"Failed to restart fan control: {ex.Message}");
             }
@@ -815,7 +849,6 @@ hst_temps_ramp_down : {string.Join(" ", gpuRampDown)}";
             if (DeviceSelector.SelectedItem is ComboBoxItem selectedItem && currentConfig != null)
             {
                 currentConfig.LegionGeneration = selectedItem.Content.ToString().Contains("5th") ? 5 : 6;
-                Debug.WriteLine($"User selected Legion Generation: {currentConfig.LegionGeneration}");
 
             }
         }

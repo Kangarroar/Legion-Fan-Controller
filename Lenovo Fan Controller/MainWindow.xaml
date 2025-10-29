@@ -358,11 +358,6 @@
                         Click="StartupMenuItem_Click" />
                     <MenuFlyoutSeparator />
                     <MenuFlyoutItem
-                        x:Name="ResetFirstRunMenuItem"
-                        Text="[DEBUG] Reset First Run"
-                        Click="ResetFirstRunMenuItem_Click" />
-                    <MenuFlyoutSeparator />
-                    <MenuFlyoutItem
                         Text="Exit"
                         Click="ExitMenuItem_Click" />
                 </MenuFlyout>

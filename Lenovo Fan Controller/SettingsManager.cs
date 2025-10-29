@@ -12,7 +12,7 @@ namespace Lenovo_Fan_Controller
 
         // Default values
         public const bool DefaultShowGpuTemp = true;
-        public const bool DefaultStartMinimized = false;
+        public const bool DefaultStartMinimized = true;
         public const bool DefaultUnlockMaxRpm = false;
 
         public const int NormalMaxRpm = 4400;
@@ -87,7 +87,6 @@ namespace Lenovo_Fan_Controller
             }
             catch (Exception ex)
             {
-                System.Diagnostics.Debug.WriteLine($"Failed to read setting {key}: {ex.Message}");
                 return defaultValue;
             }
         }
@@ -98,11 +97,9 @@ namespace Lenovo_Fan_Controller
             {
                 using var regKey = Registry.CurrentUser.CreateSubKey(RegistryKeyPath);
                 regKey?.SetValue(key, value ? 1 : 0, RegistryValueKind.DWord);
-                System.Diagnostics.Debug.WriteLine($"Setting saved: {key} = {value}");
             }
             catch (Exception ex)
             {
-                System.Diagnostics.Debug.WriteLine($"Failed to save setting {key}: {ex.Message}");
             }
         }
     }

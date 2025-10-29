@@ -21,13 +21,11 @@ namespace Lenovo_Fan_Controller
                 bool keyExists = key?.GetValue(FirstRunValueName) != null;
                 bool isFirstRun = !keyExists;
                 
-                System.Diagnostics.Debug.WriteLine($"Registry value exists: {keyExists}, {isFirstRun}");
                 
                 return isFirstRun;
             }
             catch (Exception ex)
             {
-                System.Diagnostics.Debug.WriteLine($"Error checking registry: {ex.Message}");
                 return false; 
             }
         }
@@ -41,11 +39,9 @@ namespace Lenovo_Fan_Controller
             {
                 using var key = Registry.CurrentUser.CreateSubKey(RegistryKeyPath);
                 key?.SetValue(FirstRunValueName, 1, RegistryValueKind.DWord);
-                System.Diagnostics.Debug.WriteLine($"Registry value created: {RegistryKeyPath}\\{FirstRunValueName} = 1");
             }
             catch (Exception ex)
             {
-                System.Diagnostics.Debug.WriteLine($"Failed to save {ex.Message}");
             }
         }
 
@@ -56,11 +52,9 @@ namespace Lenovo_Fan_Controller
         {
             if (!IsFirstRun())
             {
-                System.Diagnostics.Debug.WriteLine("Not first run skipping dialog");
                 return false; // Not first run, dialog not shown
             }
 
-            System.Diagnostics.Debug.WriteLine("Showing warning dialog...");
             
             // Show the warning dialog
             await ShowWarningDialog(window);
@@ -68,7 +62,6 @@ namespace Lenovo_Fan_Controller
             // Mark as complete
             MarkFirstRunComplete();
             
-            System.Diagnostics.Debug.WriteLine("Dialog shown and flag saved");
             return true; // Dialog was shown
         }
 
@@ -88,27 +81,19 @@ namespace Lenovo_Fan_Controller
                     XamlRoot = window.Content?.XamlRoot
                 };
 
-                // why do i even have to delay
                 if (dialog.XamlRoot == null)
                 {
-                    System.Diagnostics.Debug.WriteLine("XamlRoot null, waiting 100ms...");
                     await Task.Delay(100);
                     dialog.XamlRoot = window.Content?.XamlRoot;
                 }
 
                 if (dialog.XamlRoot != null)
                 {
-                    System.Diagnostics.Debug.WriteLine("Showing dialog with XamlRoot");
                     await dialog.ShowAsync();
-                }
-                else
-                {
-                    System.Diagnostics.Debug.WriteLine("XamlRoot still null after retry, cannot show dialog");
                 }
             }
             catch (Exception ex)
             {
-                System.Diagnostics.Debug.WriteLine($"Failed to show dialog: {ex.Message}");
             }
         }
 
@@ -178,21 +163,11 @@ namespace Lenovo_Fan_Controller
                     if (value != null)
                     {
                         key.DeleteValue(FirstRunValueName);
-                        System.Diagnostics.Debug.WriteLine($"Registry value deleted: {RegistryKeyPath}\\{FirstRunValueName}");
                     }
-                    else
-                    {
-                        System.Diagnostics.Debug.WriteLine($"Registry value didn't exist, nothing to reset");
-                    }
-                }
-                else
-                {
-                    System.Diagnostics.Debug.WriteLine($"Registry key doesn't exist, nothing to reset");
                 }
             }
             catch (Exception ex)
             {
-                System.Diagnostics.Debug.WriteLine($"Failed to reset first run flag: {ex.Message}");
             }
         }
     }
