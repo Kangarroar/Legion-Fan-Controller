@@ -704,12 +704,21 @@ hst_temps_ramp_down : {string.Join(" ", gpuRampDown)}";
             try
             {
                 foreach (var process in Process.GetProcessesByName("FanControl"))
-                    process.Kill();
+                {
+                    try
+                    {
+                        process.Kill();
+                        process.WaitForExit(1000);
+                    }
+                    catch { }
+                }
 
                 Process.Start(new ProcessStartInfo
                 {
                     FileName = App.FanControlPath,
-                    UseShellExecute = true
+                    UseShellExecute = false,
+                    CreateNoWindow = true,
+                    WindowStyle = ProcessWindowStyle.Hidden
                 });
 
                 ShowSuccessDialog("Success", "Fan control service restarted!");
