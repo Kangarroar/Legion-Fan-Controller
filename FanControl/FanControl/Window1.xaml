@@ -247,8 +247,8 @@
                                 </Slider.Template>
                             </Slider>
                         </StackPanel>
-                        <TextBox x:Name="CPU_1" HorizontalAlignment="Left" Margin="29,206,0,0" Text="11" VerticalAlignment="Top" Width="47" TextChanged="TextBox_TextChanged" FontFamily="Segoe UI" MaxLines="1" MaxLength="2"/>
-                        <TextBox x:Name="GPU_1" HorizontalAlignment="Left" Margin="29,256,0,0" Text="11" VerticalAlignment="Top" Width="47" FontFamily="Segoe UI"/>
+                        <TextBox x:Name="CPU_1" HorizontalAlignment="Left" Margin="29,206,0,0" Text="30" VerticalAlignment="Top" Width="47" TextChanged="TextBox_TextChanged" FontFamily="Segoe UI" MaxLines="1" MaxLength="2"/>
+                        <TextBox x:Name="GPU_1" HorizontalAlignment="Left" Margin="29,256,0,0" Text="30" VerticalAlignment="Top" Width="47" FontFamily="Segoe UI"/>
                         <TextBox x:Name="CPU_1_Copiar" HorizontalAlignment="Left" Margin="106,206,0,0" Text="45" VerticalAlignment="Top" Width="47" TextChanged="TextBox_TextChanged" FontFamily="Segoe UI"/>
                         <TextBox x:Name="GPU_1_Copiar" HorizontalAlignment="Left" Margin="106,256,0,0" Text="50" VerticalAlignment="Top" Width="47" TextChanged="GPU_1_Copiar_TextChanged" FontFamily="Segoe UI"/>
                         <TextBox x:Name="CPU_1_Copiar1" HorizontalAlignment="Left" Margin="187,206,0,0" Text="55" VerticalAlignment="Top" Width="47" TextChanged="TextBox_TextChanged" MinLines="1"/>

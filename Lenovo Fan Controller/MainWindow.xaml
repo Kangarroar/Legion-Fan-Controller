@@ -313,8 +313,7 @@
                                     <ToggleButton x:Name="Turbo" Content="Turbo Mode"
                                           CornerRadius="4"
                                           Background="{ThemeResource ControlFillColorDefaultBrush}"
-                                          Checked="Turbo_Checked" 
-                                          Unchecked="Turbo_Unchecked"/>
+                                          IsEnabled="False"/>
                                 </StackPanel>
                             </StackPanel>
                         </Expander>

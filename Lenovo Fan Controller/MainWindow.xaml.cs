@@ -541,13 +541,13 @@ namespace Lenovo_Fan_Controller
                 FanCurvePoints = GetConfigValue(lines, "fan_curve_points", 5),
                 AccelerationValue = GetConfigValue(lines, "fan_accl_value", 2),
                 DecelerationValue = GetConfigValue(lines, "fan_deccl_value", 2),
-                FanRpmPoints = GetConfigArray(lines, "fan_rpm_points", new[] { 0, 0, 2200, 3600, 3900 }),
-                CpuTempsRampUp = GetConfigArray(lines, "cpu_temps_ramp_up", new[] { 11, 45, 55, 60, 65 }),
-                CpuTempsRampDown = GetConfigArray(lines, "cpu_temps_ramp_down", new[] { 10, 43, 53, 58, 63 }),
-                GpuTempsRampUp = GetConfigArray(lines, "gpu_temps_ramp_up", new[] { 11, 50, 55, 60, 63 }),
-                GpuTempsRampDown = GetConfigArray(lines, "gpu_temps_ramp_down", new[] { 10, 48, 53, 58, 61 }),
-                HstTempsRampUp = GetConfigArray(lines, "hst_temps_ramp_up", new[] { 11, 50, 55, 65, 70 }),
-                HstTempsRampDown = GetConfigArray(lines, "hst_temps_ramp_down", new[] { 10, 48, 53, 63, 68 })
+                FanRpmPoints = GetConfigArray(lines, "fan_rpm_points", new[] { 0, 1500, 2200, 3600, 3900 }),
+                CpuTempsRampUp = GetConfigArray(lines, "cpu_temps_ramp_up", new[] { 30, 45, 55, 60, 65 }),
+                CpuTempsRampDown = GetConfigArray(lines, "cpu_temps_ramp_down", new[] { 28, 43, 53, 58, 63 }),
+                GpuTempsRampUp = GetConfigArray(lines, "gpu_temps_ramp_up", new[] { 30, 50, 55, 60, 63 }),
+                GpuTempsRampDown = GetConfigArray(lines, "gpu_temps_ramp_down", new[] { 28, 48, 53, 58, 61 }),
+                HstTempsRampUp = GetConfigArray(lines, "hst_temps_ramp_up", new[] { 30, 50, 55, 65, 70 }),
+                HstTempsRampDown = GetConfigArray(lines, "hst_temps_ramp_down", new[] { 28, 48, 53, 63, 68 })
             };
         }
 
@@ -596,13 +596,13 @@ namespace Lenovo_Fan_Controller
                 FanCurvePoints = 5,
                 AccelerationValue = 2,
                 DecelerationValue = 2,
-                FanRpmPoints = new[] { 0, 0, 2200, 3600, 3900 },
-                CpuTempsRampUp = new[] { 11, 45, 55, 60, 65 },
-                CpuTempsRampDown = new[] { 10, 43, 53, 58, 63 },
-                GpuTempsRampUp = new[] { 11, 50, 55, 60, 63 },
-                GpuTempsRampDown = new[] { 10, 48, 53, 58, 61 },
-                HstTempsRampUp = new[] { 11, 50, 55, 65, 70 },
-                HstTempsRampDown = new[] { 10, 48, 53, 63, 68 }
+                FanRpmPoints = new[] { 0, 1500, 2200, 3600, 3900 },
+                CpuTempsRampUp = new[] { 30, 45, 55, 60, 65 },
+                CpuTempsRampDown = new[] { 28, 43, 53, 58, 63 },
+                GpuTempsRampUp = new[] { 30, 50, 55, 60, 63 },
+                GpuTempsRampDown = new[] { 28, 48, 53, 58, 61 },
+                HstTempsRampUp = new[] { 30, 50, 55, 65, 70 },
+                HstTempsRampDown = new[] { 28, 48, 53, 63, 68 }
             };
         }
 
@@ -612,13 +612,13 @@ namespace Lenovo_Fan_Controller
 fan_curve_points : 5
 fan_accl_value : 2
 fan_deccl_value : 2
-fan_rpm_points : 0 0 2200 3600 3900
-cpu_temps_ramp_up : 11 45 55 60 65
-cpu_temps_ramp_down : 10 43 53 58 63
-gpu_temps_ramp_up : 11 50 55 60 63
-gpu_temps_ramp_down : 10 48 53 58 61
-hst_temps_ramp_up : 11 50 55 65 70
-hst_temps_ramp_down : 10 48 53 63 68";
+fan_rpm_points : 0 1500 2200 3600 3900
+cpu_temps_ramp_up : 30 45 55 60 65
+cpu_temps_ramp_down : 28 43 53 58 63
+gpu_temps_ramp_up : 30 50 55 60 63
+gpu_temps_ramp_down : 28 48 53 58 61
+hst_temps_ramp_up : 30 50 55 65 70
+hst_temps_ramp_down : 28 48 53 63 68";
         }
 
         private string GetValue(string[] lines, string key)
@@ -885,44 +885,47 @@ hst_temps_ramp_down : {string.Join(" ", gpuRampDown)}";
             }
         }
 
-        //TURBO
-        private bool turboEnabled = false;
-        private int[] originalRpmValues = new int[5];
-
-        private void Turbo_Checked(object sender, RoutedEventArgs e)
-        {
-            originalRpmValues[0] = (int)Slider1.Value;
-            originalRpmValues[1] = (int)Slider2.Value;
-            originalRpmValues[2] = (int)Slider3.Value;
-            originalRpmValues[3] = (int)Slider4.Value;
-            originalRpmValues[4] = (int)Slider5.Value;
-
-            // Set all fans to max RPM (4400) LEGION 5 15ANH05
-            // I cant find tech information about the max rpm of 5th and 6th gen, thanks lenovo
-            Slider1.Value = 4400;
-            Slider2.Value = 4400;
-            Slider3.Value = 4400;
-            Slider4.Value = 4400;
-            Slider5.Value = 4400;
-
-            turboEnabled = true;
-            Turbo.Background = new SolidColorBrush(Colors.Red);
-            SaveConfig();
-        }
-
-        private void Turbo_Unchecked(object sender, RoutedEventArgs e)
-        {
-            // Restore
-            Slider1.Value = originalRpmValues[0];
-            Slider2.Value = originalRpmValues[1];
-            Slider3.Value = originalRpmValues[2];
-            Slider4.Value = originalRpmValues[3];
-            Slider5.Value = originalRpmValues[4];
-
-            turboEnabled = false;
-            Turbo.Background = new SolidColorBrush(Colors.Transparent);
-            SaveConfig();
-        }
+        ////TURBO
+        /// Gonna implement this later.
+        /// Alternative is Settings > Enable 5000RPM > Modify the profile to use 5000RPM
+        /// 
+        //private bool turboEnabled = false;
+        //private int[] originalRpmValues = new int[5];
+//
+        //private void Turbo_Checked(object sender, RoutedEventArgs e)
+        //{
+        //    originalRpmValues[0] = (int)Slider1.Value;
+        //    originalRpmValues[1] = (int)Slider2.Value;
+        //    originalRpmValues[2] = (int)Slider3.Value;
+        //    originalRpmValues[3] = (int)Slider4.Value;
+        //    originalRpmValues[4] = (int)Slider5.Value;
+//
+        //    // Set all fans to max RPM (4400) LEGION 5 15ANH05
+        //    // I cant find tech information about the max rpm of 5th and 6th gen, thanks lenovo
+        //    Slider1.Value = 4400;
+        //    Slider2.Value = 4400;
+        //    Slider3.Value = 4400;
+        //    Slider4.Value = 4400;
+        //    Slider5.Value = 4400;
+//
+        //    turboEnabled = true;
+        //    Turbo.Background = new SolidColorBrush(Colors.Red);
+        //    SaveConfig();
+        //}
+//
+        //private void Turbo_Unchecked(object sender, RoutedEventArgs e)
+        //{
+        //    // Restore
+        //    Slider1.Value = originalRpmValues[0];
+        //    Slider2.Value = originalRpmValues[1];
+        //    Slider3.Value = originalRpmValues[2];
+        //    Slider4.Value = originalRpmValues[3];
+        //    Slider5.Value = originalRpmValues[4];
+//
+        //    turboEnabled = false;
+        //    Turbo.Background = new SolidColorBrush(Colors.Transparent);
+        //    SaveConfig();
+        //}
     }
 
     // Helper class for window show/hide operations
