@@ -1,6 +1,6 @@
 # Lenovo Legion 5/6 Fan Controller
 A Windows utility for custom fan control on Lenovo Legion 5/6 series laptops. Based and forked from [LegionGen5-6FanControl_WinRing_Smokeless_I-OPortsMethod](https://github.com/Z4ndyz/LegionGen5-6FanControl_WinRing_Smokeless_I-OPortsMethod).
-![App Screenshot](https://media.discordapp.net/attachments/720567770898497549/1354558659384053880/Legion_Fan_Controller_26-03-2025_17_52_07.png?ex=67e5ba8e&is=67e4690e&hm=aec4aad0c2a529085995d1dc4cd8de8d21d136441a59b475cad263f86cfa8f55&=&format=webp&quality=lossless) 
+<img width="836" height="773" alt="image" src="https://github.com/user-attachments/assets/dfd9f7c3-82c7-4913-93cf-1f0283aff9ad" />
 
 ## Installation
 
