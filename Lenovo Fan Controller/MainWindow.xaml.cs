@@ -76,6 +76,21 @@ namespace Lenovo_Fan_Controller
         {
             if (_isExiting)
             {
+                // Force kill FanControl
+                try
+                {
+                    foreach (var process in Process.GetProcessesByName("FanControl"))
+                    {
+                        try
+                        {
+                            process.Kill();
+                            process.WaitForExit(1000);
+                        }
+                        catch { }
+                    }
+                }
+                catch { }
+
                 TrayIcon?.Dispose();
                 return;
             }
