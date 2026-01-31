@@ -20,8 +20,8 @@ namespace LegionFanController.Hardware
 
     internal static class ECUtils
     {
-        private const byte EC_ADDR_PORT = 0x2E;
-        private const byte EC_DATA_PORT = 0x2F;
+        private const byte EC_ADDR_PORT = 0x4E;
+        private const byte EC_DATA_PORT = 0x4F;
 
         private static bool _initialized = false;
 
