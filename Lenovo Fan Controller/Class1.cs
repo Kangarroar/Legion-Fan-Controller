@@ -13,5 +13,8 @@
         public int[] GpuTempsRampDown { get; set; }
         public int[] HstTempsRampUp { get; set; }
         public int[] HstTempsRampDown { get; set; }
+        public int[] CpuTemps { get; set; }
+        public int[] GpuTemps { get; set; }
+        public int[] HstTemps { get; set; }
     }
 }
