@@ -28,7 +28,7 @@ namespace Lenovo_Fan_Controller
 
             FanControlPath = Path.Combine(fanControlDir, "FanControl.exe");
             BalancedConfigPath = Path.Combine(fanControlDir, "fan_config_balanced.txt");
-            PerformanceCongfgggfigPath = Path.Combine(fanControlDir, "fan_config_perfcust.txt");
+            PerformanceConfigPath = Path.Combine(fanControlDir, "fan_config_perfcust.txt");
             QuietConfigPath = Path.Combine(fanControlDir, "fan_config_quiet.txt");
         }
 
