@@ -6,7 +6,7 @@ namespace Lenovo_Fan_Controller
 {
     public partial class App : Application
     {
-        public static string FanControlPath { get; private set; } 
+        public static string FanControlPath { get; private set; }
         public static string BalancedConfigPath { get; private set; }
         public static string PerformanceConfigPath { get; private set; }
         public static string QuietConfigPath { get; private set; }
@@ -28,7 +28,7 @@ namespace Lenovo_Fan_Controller
 
             FanControlPath = Path.Combine(fanControlDir, "FanControl.exe");
             BalancedConfigPath = Path.Combine(fanControlDir, "fan_config_balanced.txt");
-            PerformanceConfigPath = Path.Combine(fanControlDir, "fan_config_perfcust.txt");
+            PerformanceCongfgggfigPath = Path.Combine(fanControlDir, "fan_config_perfcust.txt");
             QuietConfigPath = Path.Combine(fanControlDir, "fan_config_quiet.txt");
         }
 

@@ -5,6 +5,9 @@ namespace LegionFanController.Hardware
 {
     internal static class WinRing
     {
+        [DllImport("kernel32.dll", CharSet = CharSet.Unicode, SetLastError = true)]
+        public static extern IntPtr LoadLibrary(string librayName);
+
         [DllImport("WinRing0x64.dll")]
         public static extern bool InitializeOls();
 
@@ -30,7 +33,55 @@ namespace LegionFanController.Hardware
             if (_initialized)
                 return true;
 
+            try
+            {
+                string baseDir = AppDomain.CurrentDomain.BaseDirectory;
+                string subDir = System.IO.Path.Combine(baseDir, "Fan Control");
+                string webRingDll = System.IO.Path.Combine(subDir, "WinRing0x64.dll");
+                string webRingSys = System.IO.Path.Combine(subDir, "WinRing0x64.sys");
+                string destSys = System.IO.Path.Combine(baseDir, "WinRing0x64.sys");
+
+                System.Diagnostics.Debug.WriteLine($"Checking for WinRing files in: {subDir}");
+
+                // Ensure .sys file is in the execution directory
+                if (System.IO.File.Exists(webRingSys))
+                {
+                    if (!System.IO.File.Exists(destSys))
+                    {
+                        try
+                        {
+                            System.Diagnostics.Debug.WriteLine($"opying {webRingSys} to {destSys}...");
+                            System.IO.File.Copy(webRingSys, destSys);
+                        }
+                        catch (Exception ex)
+                        {
+                            System.Diagnostics.Debug.WriteLine($"Failed to copy .sys file: {ex.Message}");
+                        }
+                    }
+                }
+                else
+                {
+                    System.Diagnostics.Debug.WriteLine($"WinRing0x64.sys DOEST NOT EXIST IN {subDir}");
+                }
+
+                System.Diagnostics.Debug.WriteLine($"Attempting to load WinRing0 from: {webRingDll}");
+                if (System.IO.File.Exists(webRingDll))
+                {
+                    IntPtr ptr = WinRing.LoadLibrary(webRingDll);
+                    System.Diagnostics.Debug.WriteLine($"LoadLibrary result: {ptr}");
+                }
+                else
+                {
+                    System.Diagnostics.Debug.WriteLine("WinRing0x64.dll not found at expected path!");
+                }
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"Exception loading DLL: {ex.Message}");
+            }
+
             _initialized = WinRing.InitializeOls();
+            System.Diagnostics.Debug.WriteLine($"WinRing.InitializeOls() returned: {_initialized}");
             return _initialized;
         }
 
@@ -53,7 +104,9 @@ namespace LegionFanController.Hardware
             WinRing.WriteIoPortByte(EC_DATA_PORT, 0x12);
             WinRing.WriteIoPortByte(EC_ADDR_PORT, 0x2F);
 
-            return WinRing.ReadIoPortByte(EC_DATA_PORT);
+            byte val = WinRing.ReadIoPortByte(EC_DATA_PORT);
+            // System.Diagnostics.Debug.WriteLine($"ReadECByte(0x{addr:X}) = {val}"); // Too spammy for every byte
+            return val;
         }
 
         private static ushort ReadECWord(ushort lsbAddr, ushort msbAddr)
@@ -75,7 +128,7 @@ namespace LegionFanController.Hardware
                 (ushort)ECRegister.FAN1_RPM_LSB,
                 (ushort)ECRegister.FAN1_RPM_MSB
             );
-
+            System.Diagnostics.Debug.WriteLine($"Fan1 Raw: {raw}");
             return SanitizeRpm(raw);
         }
 
@@ -86,6 +139,7 @@ namespace LegionFanController.Hardware
                 (ushort)ECRegister.FAN2_RPM_LSB,
                 (ushort)ECRegister.FAN2_RPM_MSB
             );
+            System.Diagnostics.Debug.WriteLine($"Fan2 Raw: {raw}");
 
             // 
             //raw /= 2;
@@ -110,12 +164,16 @@ namespace LegionFanController.Hardware
 
         public static int ReadCpuTemp()
         {
-            return ReadECByte((ushort)ECRegister.CPU_TEMP);
+            int val = ReadECByte((ushort)ECRegister.CPU_TEMP);
+            System.Diagnostics.Debug.WriteLine($"CPU Temp Raw: {val}");
+            return val;
         }
 
         public static int ReadGpuTemp()
         {
-            return ReadECByte((ushort)ECRegister.GPU_TEMP);
+            int val = ReadECByte((ushort)ECRegister.GPU_TEMP);
+            System.Diagnostics.Debug.WriteLine($"GPU Temp Raw: {val}");
+            return val;
         }
 
         public static int ReadVrmTemp()

@@ -13,6 +13,7 @@ using System.Threading.Tasks;
 using System.Windows.Input;
 using WinRT.Interop;
 using H.NotifyIcon;
+using LegionFanController.Hardware;
 
 namespace Lenovo_Fan_Controller
 {
@@ -54,7 +55,7 @@ namespace Lenovo_Fan_Controller
         private void CheckStartMinimized()
         {
             var args = Environment.GetCommandLineArgs();
-        
+
             if (args.Length > 1 && args[1].Equals("/minimized", StringComparison.OrdinalIgnoreCase))
             {
                 _shouldStartMinimized = true;
@@ -63,7 +64,7 @@ namespace Lenovo_Fan_Controller
             {
                 _shouldStartMinimized = true;
             }
-            
+
             if (_shouldStartMinimized)
             {
                 _ = HideWindowAfterReadyAsync();
@@ -78,7 +79,7 @@ namespace Lenovo_Fan_Controller
             {
                 await Task.Delay(50);
             }
-            
+
             await Task.Delay(100);
             HideWindow();
         }
@@ -167,14 +168,14 @@ namespace Lenovo_Fan_Controller
                     success = StartupManager.EnableStartup();
                     if (success)
                     {
-                        await ShowDialogSafeAsync("Startup Enabled", 
+                        await ShowDialogSafeAsync("Startup Enabled",
                             "Legion Fan Controller will now start automatically when Windows boots.\n\n" +
                             "You can disable this anytime from the tray icon menu or Task Manager's Startup tab.");
                     }
                     else
                     {
                         StartupMenuItem.IsChecked = false;
-                        await ShowDialogSafeAsync("Error", 
+                        await ShowDialogSafeAsync("Error",
                             "Failed to enable startup. Please make sure the application is running as Administrator.");
                     }
                 }
@@ -184,13 +185,13 @@ namespace Lenovo_Fan_Controller
                     success = StartupManager.DisableStartup();
                     if (success)
                     {
-                        await ShowDialogSafeAsync("Startup Disabled", 
+                        await ShowDialogSafeAsync("Startup Disabled",
                             "Legion Fan Controller will no longer start automatically with Windows.");
                     }
                     else
                     {
                         StartupMenuItem.IsChecked = true;
-                        await ShowDialogSafeAsync("Error", 
+                        await ShowDialogSafeAsync("Error",
                             "Failed to disable startup. Please make sure the application is running as Administrator.");
                     }
                 }
@@ -205,7 +206,7 @@ namespace Lenovo_Fan_Controller
         private async void ResetFirstRunMenuItem_Click(object sender, RoutedEventArgs e)
         {
             FirstRunHelper.ResetFirstRun();
-            await ShowDialogSafeAsync("First Run Reset", 
+            await ShowDialogSafeAsync("First Run Reset",
                 "Set");
         }
 
@@ -271,7 +272,7 @@ namespace Lenovo_Fan_Controller
                 Content = stackPanel,
                 PrimaryButtonText = "Save",
                 CloseButtonText = "Cancel",
-                DefaultButton = ContentDialogButton.Primary, 
+                DefaultButton = ContentDialogButton.Primary,
                 XamlRoot = this.Content?.XamlRoot
             };
 
@@ -282,7 +283,7 @@ namespace Lenovo_Fan_Controller
                 bool showGpuChanged = SettingsManager.GetShowGpuTemp() != showGpuCheckBox.IsChecked;
                 bool maxRpmChanged = SettingsManager.GetUnlockMaxRpm() != unlockMaxRpmCheckBox.IsChecked;
                 bool startMinimizedChanged = SettingsManager.GetStartMinimized() != startMinimizedCheckBox.IsChecked;
-                
+
                 // Save settings
                 SettingsManager.SetShowGpuTemp(showGpuCheckBox.IsChecked == true);
                 SettingsManager.SetStartMinimized(startMinimizedCheckBox.IsChecked == true);
@@ -424,7 +425,41 @@ namespace Lenovo_Fan_Controller
                     $"Failed to detect power mode: {ex.Message}");
                 // Fallback to balanced
                 LoadConfig(App.BalancedConfigPath);
-                RestartFanControl(); 
+                RestartFanControl();
+            }
+
+            // Initialize Hardware Monitoring
+            if (ECUtils.Init())
+            {
+                System.Diagnostics.Debug.WriteLine("ECUtils.Init() returned true in MainWindow");
+                var timer = new DispatcherTimer();
+                timer.Interval = TimeSpan.FromSeconds(1);
+                timer.Tick += (s, e) =>
+                {
+                    try
+                    {
+                        int cpuTemp = ECUtils.ReadCpuTemp();
+                        int gpuTemp = ECUtils.ReadGpuTemp();
+                        int cpuFan = ECUtils.ReadFan1Rpm();
+                        int gpuFan = ECUtils.ReadFan2Rpm();
+
+                        System.Diagnostics.Debug.WriteLine($"Tick: CPU={cpuTemp}, GPU={gpuTemp}, Fan1={cpuFan}, Fan2={gpuFan}");
+
+                        MonitorCpuTemp.Text = $"{cpuTemp} °C";
+                        MonitorGpuTemp.Text = $"{gpuTemp} °C";
+                        MonitorCpuFan.Text = $"{cpuFan} RPM";
+                        MonitorGpuFan.Text = $"{gpuFan} RPM";
+                    }
+                    catch (Exception ex)
+                    {
+                        System.Diagnostics.Debug.WriteLine($"Monitoring Tick Error: {ex.Message}");
+                    }
+                };
+                timer.Start();
+            }
+            else
+            {
+                System.Diagnostics.Debug.WriteLine("ECUtils.Init() returned false in MainWindow");
             }
         }
 
@@ -445,7 +480,7 @@ namespace Lenovo_Fan_Controller
             _xamlRoot = this.Content.XamlRoot;
             _isWindowReady = true;
             this.Activated -= MainWindow_Activated;
-            
+
             // If we should start minimized, hide the window again
             if (_shouldStartMinimized)
             {
@@ -525,15 +560,15 @@ namespace Lenovo_Fan_Controller
             {
                 _ = ShowDialogSafeAsync("Config Error", $"Failed to load config: {ex.Message}");
                 currentConfig = CreateDefaultConfig();
-                UpdateDeviceSelector(); 
+                UpdateDeviceSelector();
             }
         }
 
         private FanConfig ParseConfig(string[] lines)
         {
-            
+
             return new FanConfig
-              
+
             {
                 //TODO: Check if Legion Gen 5 or 6th
                 //      Check if sys has info about max rpm for fans to automatically set the max.
@@ -721,8 +756,8 @@ cpu_temps_ramp_down : {string.Join(" ", cpuRampDown)}
 gpu_temps_ramp_up : {string.Join(" ", currentConfig.GpuTempsRampUp)}
 gpu_temps_ramp_down : {string.Join(" ", gpuRampDown)}
 hst_temps_ramp_up : {string.Join(" ", currentConfig.GpuTempsRampUp)}
-hst_temps_ramp_down : {string.Join(" ", gpuRampDown)}";  
-}
+hst_temps_ramp_down : {string.Join(" ", gpuRampDown)}";
+        }
 
         private async void ShowErrorDialog(string title, string message)
         {
@@ -770,19 +805,19 @@ hst_temps_ramp_down : {string.Join(" ", gpuRampDown)}";
                 var startInfo = new ProcessStartInfo
                 {
                     FileName = App.FanControlPath,
-                    UseShellExecute = false,  
-                    CreateNoWindow = true,   
-                    WindowStyle = ProcessWindowStyle.Hidden 
+                    UseShellExecute = false,
+                    CreateNoWindow = true,
+                    WindowStyle = ProcessWindowStyle.Hidden
                 };
 
                 Process.Start(startInfo);
             }
             catch (Exception ex)
             {
-              
+
                 ShowErrorDialog("Fan Control Error", $"Failed to restart fan control: {ex.Message}");
             }
-        
+
         }
         private async void NavigationView_SelectionChanged(NavigationView sender, NavigationViewSelectionChangedEventArgs args)
         {
@@ -891,7 +926,7 @@ hst_temps_ramp_down : {string.Join(" ", gpuRampDown)}";
         /// 
         //private bool turboEnabled = false;
         //private int[] originalRpmValues = new int[5];
-//
+        //
         //private void Turbo_Checked(object sender, RoutedEventArgs e)
         //{
         //    originalRpmValues[0] = (int)Slider1.Value;
@@ -899,7 +934,7 @@ hst_temps_ramp_down : {string.Join(" ", gpuRampDown)}";
         //    originalRpmValues[2] = (int)Slider3.Value;
         //    originalRpmValues[3] = (int)Slider4.Value;
         //    originalRpmValues[4] = (int)Slider5.Value;
-//
+        //
         //    // Set all fans to max RPM (4400) LEGION 5 15ANH05
         //    // I cant find tech information about the max rpm of 5th and 6th gen, thanks lenovo
         //    Slider1.Value = 4400;
@@ -907,12 +942,12 @@ hst_temps_ramp_down : {string.Join(" ", gpuRampDown)}";
         //    Slider3.Value = 4400;
         //    Slider4.Value = 4400;
         //    Slider5.Value = 4400;
-//
+        //
         //    turboEnabled = true;
         //    Turbo.Background = new SolidColorBrush(Colors.Red);
         //    SaveConfig();
         //}
-//
+        //
         //private void Turbo_Unchecked(object sender, RoutedEventArgs e)
         //{
         //    // Restore
@@ -921,7 +956,7 @@ hst_temps_ramp_down : {string.Join(" ", gpuRampDown)}";
         //    Slider3.Value = originalRpmValues[2];
         //    Slider4.Value = originalRpmValues[3];
         //    Slider5.Value = originalRpmValues[4];
-//
+        //
         //    turboEnabled = false;
         //    Turbo.Background = new SolidColorBrush(Colors.Transparent);
         //    SaveConfig();

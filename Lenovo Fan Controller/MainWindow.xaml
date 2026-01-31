@@ -100,6 +100,7 @@
                         <RowDefinition Height="Auto"/>
                         <RowDefinition Height="*"/>
                         <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="Auto"/>
                     </Grid.RowDefinitions>
 
                     <!-- Profile Header -->
@@ -284,8 +285,38 @@
                         </StackPanel>
                     </ScrollViewer>
 
+                    <!-- Hardware Monitoring -->
+                    <Grid Grid.Row="2" Margin="0,0,0,24">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="*"/>
+                        </Grid.ColumnDefinitions>
+
+                        <StackPanel Grid.Column="0" HorizontalAlignment="Center">
+                            <TextBlock Text="CPU Temp" Opacity="0.6" FontSize="12" HorizontalAlignment="Center"/>
+                            <TextBlock x:Name="MonitorCpuTemp" Text="-- °C" FontSize="16" FontWeight="SemiBold" HorizontalAlignment="Center"/>
+                        </StackPanel>
+
+                        <StackPanel Grid.Column="1" HorizontalAlignment="Center">
+                            <TextBlock Text="GPU Temp" Opacity="0.6" FontSize="12" HorizontalAlignment="Center"/>
+                            <TextBlock x:Name="MonitorGpuTemp" Text="-- °C" FontSize="16" FontWeight="SemiBold" HorizontalAlignment="Center"/>
+                        </StackPanel>
+
+                        <StackPanel Grid.Column="2" HorizontalAlignment="Center">
+                            <TextBlock Text="CPU Fan" Opacity="0.6" FontSize="12" HorizontalAlignment="Center"/>
+                            <TextBlock x:Name="MonitorCpuFan" Text="-- RPM" FontSize="16" FontWeight="SemiBold" HorizontalAlignment="Center"/>
+                        </StackPanel>
+
+                        <StackPanel Grid.Column="3" HorizontalAlignment="Center">
+                            <TextBlock Text="GPU Fan" Opacity="0.6" FontSize="12" HorizontalAlignment="Center"/>
+                            <TextBlock x:Name="MonitorGpuFan" Text="-- RPM" FontSize="16" FontWeight="SemiBold" HorizontalAlignment="Center"/>
+                        </StackPanel>
+                    </Grid>
+
                     <!-- Advanced Settings -->
-                    <Grid Grid.Row="2">
+                    <Grid Grid.Row="3">
                         <Grid.RowDefinitions>
                             <RowDefinition Height="Auto"/>
                             <RowDefinition Height="Auto"/>
