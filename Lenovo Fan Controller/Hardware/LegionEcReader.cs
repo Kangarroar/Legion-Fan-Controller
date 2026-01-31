@@ -138,3 +138,67 @@ namespace LegionFanController.Hardware
         FAN2_RPM_MSB = 0xC5E3
     }
 }
+
+
+
+//This was used to debug only
+//using System;
+//using System.Threading;
+//using LegionFanController.Hardware;
+//
+//namespace LegionFanController.Debug
+//{
+//    internal class Program
+//    {
+//        static void Main(string[] args)
+//        {
+//            Console.WriteLine("Starting EC debug...");
+//
+//            if (!ECUtils.Init())
+//            {
+//                Console.WriteLine("WinRing failed to initialize. Make sure you run as Administrator, x64, and WinRing0.sys is present.");
+//                return;
+//            }
+//
+//
+//            Console.WriteLine("WinRing initialized");
+//
+//            Console.CancelKeyPress += (_, e) =>
+//            {
+//                e.Cancel = true;
+//                Environment.Exit(0);
+//            };
+//
+//            while (true)
+//            {
+//                try
+//                {
+//                    Console.Clear();
+//                    int cpuTemp = ECUtils.ReadCpuTemp();
+//                    int gpuTemp = ECUtils.ReadGpuTemp();
+//                    int vrmTemp = ECUtils.ReadVrmTemp();
+//                    int fan1 = ECUtils.ReadFan1Rpm();
+//                    int fan2 = ECUtils.ReadFan2Rpm();
+//                    byte value = ECUtils.ReadECByte(0xC538);
+//                    Console.WriteLine($"Raw CPU Temp read: 0x{value:X2}");
+//                    Console.WriteLine($"CPU Temp : {cpuTemp} C");
+//                    Console.WriteLine($"GPU Temp : {gpuTemp} C");
+//                    Console.WriteLine($"VRM Temp : {vrmTemp} C\n");
+//
+//                    Console.WriteLine($"Fan 1 RPM: {fan1}");
+//                    Console.WriteLine($"Fan 2 RPM: {fan2}");
+//
+//                    
+//
+//                    Thread.Sleep(1000);
+//                }
+//                catch (Exception ex)
+//                {
+//                    Console.WriteLine($"Error reading EC: {ex.Message}");
+//                    Console.ReadLine(); // pause so you can see it
+//                    break;
+//                }
+//            }
+//        }
+//    }
+//}
