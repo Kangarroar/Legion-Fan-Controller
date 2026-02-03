@@ -330,8 +330,9 @@ namespace FanControl.Utils
     }
 
     internal static class FanControl
-    {
-
+{
+    private static TempHysteresis hysteresis = new TempHysteresis();
+    private static int lastAppliedPoint = -1;
         private static async Task Main()
         {
             while (true)
@@ -1257,3 +1258,61 @@ else
 }*/
 
 //
+
+// Hysteresis
+internal sealed class TempHysteresis
+{
+    public int CurrentPoint = 0;
+
+    private DateTime? aboveSince;
+    private DateTime? belowSince;
+
+    public int Update(
+        int temp,
+        int[] rampUp,
+        int[] rampDown,
+        int hysteresisC)
+    {
+        // Ramp Up
+        if (CurrentPoint < rampUp.Length - 1 &&
+            temp >= rampUp[CurrentPoint] + hysteresisC)
+        {
+            aboveSince ??= DateTime.Now;
+
+            if ((DateTime.Now - aboveSince.Value).TotalMilliseconds >= 1000)
+            {
+                CurrentPoint++;
+                Reset();
+            }
+        }
+        else
+        {
+            aboveSince = null;
+        }
+
+        // Ramp Down
+        if (CurrentPoint > 0 &&
+            temp <= rampDown[CurrentPoint - 1] - hysteresisC)
+        {
+            belowSince ??= DateTime.Now;
+
+            if ((DateTime.Now - belowSince.Value).TotalMilliseconds >= 1000)
+            {
+                CurrentPoint--;
+                Reset();
+            }
+        }
+        else
+        {
+            belowSince = null;
+        }
+
+        return CurrentPoint;
+    }
+
+    private void Reset()
+    {
+        aboveSince = null;
+        belowSince = null;
+    }
+}
