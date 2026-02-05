@@ -27,6 +27,7 @@ namespace LegionFanController.Hardware
         private const byte EC_DATA_PORT = 0x4F;
 
         private static bool _initialized = false;
+        public static bool DEBUG_MODE = false;
 
         public static bool Init()
         {
@@ -128,7 +129,7 @@ namespace LegionFanController.Hardware
                 (ushort)ECRegister.FAN1_RPM_LSB,
                 (ushort)ECRegister.FAN1_RPM_MSB
             );
-            System.Diagnostics.Debug.WriteLine($"Fan1 Raw: {raw}");
+            if (DEBUG_MODE) System.Diagnostics.Debug.WriteLine($"Fan1 Raw: {raw}");
             return SanitizeRpm(raw);
         }
 
@@ -139,7 +140,7 @@ namespace LegionFanController.Hardware
                 (ushort)ECRegister.FAN2_RPM_LSB,
                 (ushort)ECRegister.FAN2_RPM_MSB
             );
-            System.Diagnostics.Debug.WriteLine($"Fan2 Raw: {raw}");
+            if (DEBUG_MODE) System.Diagnostics.Debug.WriteLine($"Fan2 Raw: {raw}");
 
             // 
             //raw /= 2;
@@ -165,14 +166,14 @@ namespace LegionFanController.Hardware
         public static int ReadCpuTemp()
         {
             int val = ReadECByte((ushort)ECRegister.CPU_TEMP);
-            System.Diagnostics.Debug.WriteLine($"CPU Temp Raw: {val}");
+            if (DEBUG_MODE) System.Diagnostics.Debug.WriteLine($"CPU Temp Raw: {val}");
             return val;
         }
 
         public static int ReadGpuTemp()
         {
             int val = ReadECByte((ushort)ECRegister.GPU_TEMP);
-            System.Diagnostics.Debug.WriteLine($"GPU Temp Raw: {val}");
+            if (DEBUG_MODE) System.Diagnostics.Debug.WriteLine($"GPU Temp Raw: {val}");
             return val;
         }
 
