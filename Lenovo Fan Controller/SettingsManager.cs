@@ -9,11 +9,13 @@ namespace Lenovo_Fan_Controller
         private const string ShowGpuTempKey = "ShowGpuTemp";
         private const string StartMinimizedKey = "StartMinimized";
         private const string UnlockMaxRpmKey = "UnlockMaxRpm";
+        private const string LockPointsKey = "LockPoints";
 
         // Default values
         public const bool DefaultShowGpuTemp = true;
         public const bool DefaultStartMinimized = true;
         public const bool DefaultUnlockMaxRpm = false;
+        public const bool DefaultLockPoints = false;
 
         public const int NormalMaxRpm = 4400;
         public const int UnlockedMaxRpm = 5000;
@@ -64,6 +66,16 @@ namespace Lenovo_Fan_Controller
         public static void SetUnlockMaxRpm(bool value)
         {
             SetBoolSetting(UnlockMaxRpmKey, value);
+        }
+
+        public static bool GetLockPoints()
+        {
+            return GetBoolSetting(LockPointsKey, DefaultLockPoints);
+        }
+
+        public static void SetLockPoints(bool value)
+        {
+            SetBoolSetting(LockPointsKey, value);
         }
 
         /// <summary>

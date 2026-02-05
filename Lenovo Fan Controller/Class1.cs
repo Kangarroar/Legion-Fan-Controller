@@ -16,5 +16,6 @@
         public int[] CpuTemps { get; set; }
         public int[] GpuTemps { get; set; }
         public int[] HstTemps { get; set; }
+        public int Hysteresis { get; set; }
     }
 }
