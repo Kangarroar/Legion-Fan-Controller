@@ -21,6 +21,10 @@
     <Content Include="Assets\Square150x150Logo.scale-200.png" />
     <Content Include="Assets\Square44x44Logo.scale-200.png" />
 	<Content Include="Fan Control\*" />
+	<Compile Remove="WIP\**" />
+	<EmbeddedResource Remove="WIP\**" />
+	<None Remove="WIP\**" />
+	<Page Remove="WIP\**" />
     <Content Include="Assets\Square44x44Logo.targetsize-24_altform-unplated.png" />
     <Content Include="Assets\StoreLogo.png" />
     <Content Include="Assets\Wide310x150Logo.scale-200.png" />
@@ -68,4 +72,7 @@
     <UseWPF>False</UseWPF>
     <ApplicationIcon>Assets\ico.ico</ApplicationIcon>
   </PropertyGroup>
+  <ItemGroup>
+    <PRIResource Remove="WIP\**" />
+  </ItemGroup>
 </Project>
