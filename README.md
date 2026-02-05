@@ -1,4 +1,10 @@
 # Lenovo Legion 5/6 Fan Controller
+![Stable Release](https://img.shields.io/github/v/release/Kangarroar/Legion-5-6-Fan-Controller?style=flat-square&label=Stable)
+![Pre-release](https://img.shields.io/github/v/release/Kangarroar/Legion-5-6-Fan-Controller?include_prereleases&style=flat-square&label=Pre-release)
+![License](https://img.shields.io/github/license/Kangarroar/Legion-5-6-Fan-Controller?style=flat-square)
+![Issues](https://img.shields.io/github/issues/Kangarroar/Legion-5-6-Fan-Controller?style=flat-square)
+![Downloads](https://img.shields.io/github/downloads/Kangarroar/Legion-5-6-Fan-Controller/total?style=flat-square)
+
 A Windows utility for custom fan control on Lenovo Legion 5/6 series laptops. Based and forked from [LegionGen5-6FanControl_WinRing_Smokeless_I-OPortsMethod](https://github.com/Z4ndyz/LegionGen5-6FanControl_WinRing_Smokeless_I-OPortsMethod).
 <img width="836" height="773" alt="image" src="https://github.com/user-attachments/assets/dfd9f7c3-82c7-4913-93cf-1f0283aff9ad" />
 
