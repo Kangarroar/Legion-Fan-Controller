@@ -15,7 +15,7 @@ namespace Lenovo_Fan_Controller
         public const bool DefaultShowGpuTemp = true;
         public const bool DefaultStartMinimized = true;
         public const bool DefaultUnlockMaxRpm = false;
-        public const bool DefaultLockPoints = false;
+        public const bool DefaultLockPoints = true;
 
         public const int NormalMaxRpm = 4400;
         public const int UnlockedMaxRpm = 5000;

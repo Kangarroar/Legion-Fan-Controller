@@ -4,11 +4,12 @@ using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Input;
 using Microsoft.UI.Xaml.Media;
+using Microsoft.UI.Xaml.Shapes;
 using System;
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
-using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using System.Windows.Input;
 using WinRT.Interop;
@@ -19,10 +20,11 @@ namespace Lenovo_Fan_Controller
 {
     public sealed partial class MainWindow : Window
     {
-        // I CANT FOR THE LIFE OF ME FIGURE OUT WHY THE DEFAULT BUTTON IS NOT WORKING
-        // IT KEEPS BEING HIGHLIGHTED ALWAYS
+        // Configuration
         private FanConfig currentConfig;
         private string currentProfile = "default";
+
+        // Window state
         private XamlRoot _xamlRoot;
         private bool _isWindowReady = false;
         private AppWindow _appWindow;
@@ -30,12 +32,29 @@ namespace Lenovo_Fan_Controller
         private bool _isExiting = false;
         private bool _shouldStartMinimized = false;
 
-        // left click tray
+        // Fan curve data points 
+        private List<CurvePoint> cpuCurvePoints;
+        private List<CurvePoint> gpuCurvePoints;
+        private string currentEditingCurve = "cpu"; // "cpu" or "gpu"
+
+        // Graph constants
+        private const double GRAPH_MARGIN = 40;
+        private const int MIN_TEMP = 20;
+        private const int MAX_TEMP = 100;
+        private const int MIN_RPM = 1000;
+        private int MAX_RPM = 4400;
+
+        // Dragging state
+        private CurvePoint draggedPoint;
+        private bool isDraggingCpu = false;
+        private bool isDragging = false;
+        private Windows.Foundation.Point pressedPosition;
+
+        // Left click tray
         public ICommand ShowHideWindowCommand { get; }
 
         public MainWindow()
         {
-            // Initialize command
             ShowHideWindowCommand = new RelayCommand(ShowHideWindow);
 
             this.InitializeComponent();
@@ -45,11 +64,41 @@ namespace Lenovo_Fan_Controller
             SetupEventHandlers();
             CheckStartupStatus();
 
+            // Initialize curve points (default 5 points)
+            InitializeCurvePoints(5);
+
             // Start minimized
             CheckStartMinimized();
 
-
             _ = InitializeWhenReadyAsync();
+            UpdatePointButtonsState();
+        }
+
+        private void InitializeCurvePoints(int count)
+        {
+            cpuCurvePoints = new List<CurvePoint>();
+            gpuCurvePoints = new List<CurvePoint>();
+
+            // Create default evenly spaced points
+            for (int i = 0; i < count; i++)
+            {
+                double tempPercent = (double)i / (count - 1);
+                int temp = (int)(MIN_TEMP + (MAX_TEMP - MIN_TEMP) * tempPercent);
+                int rpm = (int)(MIN_RPM + (MAX_RPM - MIN_RPM) * tempPercent);
+
+                cpuCurvePoints.Add(new CurvePoint { Temp = temp, Rpm = rpm });
+                gpuCurvePoints.Add(new CurvePoint { Temp = temp, Rpm = rpm });
+            }
+
+            UpdatePointCountText();
+        }
+
+        private void UpdatePointCountText()
+        {
+            if (PointCountText != null)
+            {
+                PointCountText.Text = $"Current: {cpuCurvePoints.Count} points";
+            }
         }
 
         private void CheckStartMinimized()
@@ -73,7 +122,6 @@ namespace Lenovo_Fan_Controller
 
         private async Task HideWindowAfterReadyAsync()
         {
-            // Hide immediately 
             HideWindow();
             while (!_isWindowReady)
             {
@@ -88,12 +136,11 @@ namespace Lenovo_Fan_Controller
         {
             StartupMenuItem.IsChecked = StartupManager.IsStartupEnabled();
         }
-        // Hijack close event
+
         private void MainWindow_Closed(object sender, WindowEventArgs args)
         {
             if (_isExiting)
             {
-                // Force kill FanControl
                 try
                 {
                     foreach (var process in Process.GetProcessesByName("FanControl"))
@@ -123,8 +170,8 @@ namespace Lenovo_Fan_Controller
             _appWindow = AppWindow.GetFromWindowId(windowId);
 
             var displayArea = DisplayArea.GetFromWindowId(windowId, DisplayAreaFallback.Primary);
-            var width = 850;
-            var height = 780;
+            var width = 1000;
+            var height = 800;
             _appWindow.MoveAndResize(new Windows.Graphics.RectInt32(
                 (displayArea.WorkArea.Width - width) / 2,
                 (displayArea.WorkArea.Height - height) / 2,
@@ -135,19 +182,35 @@ namespace Lenovo_Fan_Controller
 
         private void AppWindow_Changed(AppWindow sender, AppWindowChangedEventArgs args)
         {
+            if (args.DidSizeChange)
+            {
+                var size = _appWindow.Size;
+                bool needsResize = false;
+                int newWidth = size.Width;
+                int newHeight = size.Height;
+
+                // Enforce Min Size
+                if (newWidth < 800) { newWidth = 800; needsResize = true; }
+                if (newHeight < 600) { newHeight = 600; needsResize = true; }
+
+                // Enforce Max Size
+                if (newWidth > 1000) { newWidth = 1000; needsResize = true; }
+                if (newHeight > 800) { newHeight = 800; needsResize = true; }
+
+                if (needsResize)
+                {
+                    _appWindow.Resize(new Windows.Graphics.SizeInt32(newWidth, newHeight));
+                }
+            }
+
             if (args.DidPresenterChange && _appWindow.Presenter.Kind == AppWindowPresenterKind.CompactOverlay)
             {
                 return;
-            }
-            if (args.DidSizeChange || args.DidPresenterChange)
-            {
-                // WinUI doesn't have a direct "IsMinimized" property
             }
         }
 
         private void ContextMenu_Opening(object sender, object e)
         {
-            // Update menu items to reflect current state
             CheckStartupStatus();
             ShowHideMenuItem.Text = _isWindowVisible ? "Hide Window" : "Show Window";
         }
@@ -164,7 +227,6 @@ namespace Lenovo_Fan_Controller
                 bool success;
                 if (StartupMenuItem.IsChecked)
                 {
-                    // Enable startup
                     success = StartupManager.EnableStartup();
                     if (success)
                     {
@@ -181,7 +243,6 @@ namespace Lenovo_Fan_Controller
                 }
                 else
                 {
-                    // Disable startup
                     success = StartupManager.DisableStartup();
                     if (success)
                     {
@@ -199,15 +260,8 @@ namespace Lenovo_Fan_Controller
             catch (Exception ex)
             {
                 await ShowDialogSafeAsync("Error", $"Failed to change startup setting: {ex.Message}");
-                CheckStartupStatus(); // Revert to actual state
+                CheckStartupStatus();
             }
-        }
-
-        private async void ResetFirstRunMenuItem_Click(object sender, RoutedEventArgs e)
-        {
-            FirstRunHelper.ResetFirstRun();
-            await ShowDialogSafeAsync("First Run Reset",
-                "Set");
         }
 
         private void ExitMenuItem_Click(object sender, RoutedEventArgs e)
@@ -223,14 +277,6 @@ namespace Lenovo_Fan_Controller
 
         private async Task ShowSettingsDialog()
         {
-            // Create checkboxes for settings
-            var showGpuCheckBox = new CheckBox
-            {
-                Content = "Show GPU Temperature Controls",
-                IsChecked = SettingsManager.GetShowGpuTemp(),
-                Margin = new Thickness(0, 0, 0, 12)
-            };
-
             var startMinimizedCheckBox = new CheckBox
             {
                 Content = "Start Minimized to Tray",
@@ -253,16 +299,43 @@ namespace Lenovo_Fan_Controller
                 TextWrapping = TextWrapping.Wrap,
                 FontSize = 12,
                 Opacity = 0.7,
-                Margin = new Thickness(24, 0, 0, 0)
+                Margin = new Thickness(0, 0, 0, 4)
+            };
+
+            var lockPointsCheckBox = new CheckBox
+            {
+                Content = "Lock Fan Curve Points (Prevent Add/Remove)",
+                IsChecked = SettingsManager.GetLockPoints(),
+                Margin = new Thickness(0, 0, 0, 12)
+            };
+
+            var hysteresisLabel = new TextBlock
+            {
+                Text = "Temperature Hysteresis (Ramp Down Offset):",
+                Margin = new Thickness(0, 8, 0, 4),
+                FontWeight = Microsoft.UI.Text.FontWeights.SemiBold
+            };
+
+            var hysteresisBox = new NumberBox
+            {
+                Value = currentConfig.Hysteresis == 0 ? 3 : currentConfig.Hysteresis,
+                Minimum = 1,
+                Maximum = 8,
+                SpinButtonPlacementMode = NumberBoxSpinButtonPlacementMode.Compact,
+                Header = "Offset in °C (Default is 3)"
             };
 
             var stackPanel = new StackPanel
             {
-                Spacing = 8
+                Spacing = 8,
+                Padding = new Thickness(4)
             };
 
-            stackPanel.Children.Add(showGpuCheckBox);
             stackPanel.Children.Add(startMinimizedCheckBox);
+            stackPanel.Children.Add(lockPointsCheckBox);
+            stackPanel.Children.Add(hysteresisLabel);
+            stackPanel.Children.Add(hysteresisBox);
+            stackPanel.Children.Add(new MenuFlyoutSeparator { Margin = new Thickness(0, 12, 0, 12) });
             stackPanel.Children.Add(unlockMaxRpmCheckBox);
             stackPanel.Children.Add(warningText);
 
@@ -280,27 +353,23 @@ namespace Lenovo_Fan_Controller
 
             if (result == ContentDialogResult.Primary)
             {
-                bool showGpuChanged = SettingsManager.GetShowGpuTemp() != showGpuCheckBox.IsChecked;
-                bool maxRpmChanged = SettingsManager.GetUnlockMaxRpm() != unlockMaxRpmCheckBox.IsChecked;
-                bool startMinimizedChanged = SettingsManager.GetStartMinimized() != startMinimizedCheckBox.IsChecked;
+                bool maxRpmChanged = SettingsManager.GetUnlockMaxRpm() != (unlockMaxRpmCheckBox.IsChecked == true);
+                bool startMinimizedChanged = SettingsManager.GetStartMinimized() != (startMinimizedCheckBox.IsChecked == true);
 
-                // Save settings
-                SettingsManager.SetShowGpuTemp(showGpuCheckBox.IsChecked == true);
                 SettingsManager.SetStartMinimized(startMinimizedCheckBox.IsChecked == true);
                 SettingsManager.SetUnlockMaxRpm(unlockMaxRpmCheckBox.IsChecked == true);
+                SettingsManager.SetLockPoints(lockPointsCheckBox.IsChecked == true);
 
-                // Apply settings immediately
-                if (showGpuChanged)
-                {
-                    ApplyGpuVisibilitySetting();
-                }
+                currentConfig.Hysteresis = (int)hysteresisBox.Value;
 
                 if (maxRpmChanged)
                 {
-                    ApplyMaxRpmSetting();
+                    MAX_RPM = SettingsManager.GetMaxRpm();
                 }
 
-                // Update Task Scheduler if startup setting changed
+                // Update button states
+                UpdatePointButtonsState();
+
                 if (startMinimizedChanged)
                 {
                     try
@@ -317,36 +386,17 @@ namespace Lenovo_Fan_Controller
                     }
                 }
 
-                await ShowDialogSafeAsync("Settings Saved", "Your settings have been saved successfully.");
+                CheckStartupStatus();
+                DrawFanCurve();
+                SaveConfig();
             }
         }
 
-        private void ApplyGpuVisibilitySetting()
+        private void UpdatePointButtonsState()
         {
-            bool showGpu = SettingsManager.GetShowGpuTemp();
-            var visibility = showGpu ? Visibility.Visible : Visibility.Collapsed;
-
-            GPU1.Visibility = visibility;
-            GpuTemp1.Visibility = visibility;
-            GPU2.Visibility = visibility;
-            GpuTemp2.Visibility = visibility;
-            GPU3.Visibility = visibility;
-            GpuTemp3.Visibility = visibility;
-            GPU4.Visibility = visibility;
-            GpuTemp4.Visibility = visibility;
-            GPU5.Visibility = visibility;
-            GpuTemp5.Visibility = visibility;
-        }
-
-        private void ApplyMaxRpmSetting()
-        {
-            int maxRpm = SettingsManager.GetMaxRpm();
-
-            Slider1.Maximum = maxRpm;
-            Slider2.Maximum = maxRpm;
-            Slider3.Maximum = maxRpm;
-            Slider4.Maximum = maxRpm;
-            Slider5.Maximum = maxRpm;
+            bool locked = SettingsManager.GetLockPoints();
+            if (AddPointBtn != null) AddPointBtn.IsEnabled = !locked;
+            if (RemovePointBtn != null) RemovePointBtn.IsEnabled = !locked;
         }
 
         private void ShowHideWindow()
@@ -379,13 +429,30 @@ namespace Lenovo_Fan_Controller
             User32.ShowWindow(hWnd, User32.SW_SHOW);
             this.Activate();
         }
+
         private void SetupEventHandlers()
         {
-            NavigationView.SelectionChanged += NavigationView_SelectionChanged;
+            // Profile buttons
+            DefaultBtn.Click += ProfileButton_Click;
+            PerformanceBtn.Click += ProfileButton_Click;
+            QuietBtn.Click += ProfileButton_Click;
+
+            // Other buttons
             DeviceSelector.SelectionChanged += DeviceSelector_SelectionChanged;
             Save.Click += Save_Click;
             Restart.Click += Restart_Click;
+
+            // Point management
+            AddPointBtn.Click += AddPoint_Click;
+            RemovePointBtn.Click += RemovePoint_Click;
+
+            // Canvas events
+            FanCurveCanvas.SizeChanged += FanCurveCanvas_SizeChanged;
+            FanCurveCanvas.PointerPressed += FanCurveCanvas_PointerPressed;
+            FanCurveCanvas.PointerMoved += FanCurveCanvas_PointerMoved;
+            FanCurveCanvas.PointerReleased += FanCurveCanvas_PointerReleased;
         }
+
         private async Task InitializeWhenReadyAsync()
         {
             while (!_isWindowReady)
@@ -413,25 +480,26 @@ namespace Lenovo_Fan_Controller
                 RestartFanControl();
 
                 // Update UI to reflect current profile
-                SetActiveProfileUI(currentProfile);
+                SetActiveProfileButton(currentProfile);
 
-                // Apply saved settings
-                ApplyGpuVisibilitySetting();
-                ApplyMaxRpmSetting();
+                // Apply max RPM setting
+                MAX_RPM = SettingsManager.GetMaxRpm();
             }
             catch (Exception ex)
             {
                 await ShowDialogSafeAsync("Initialization Error",
                     $"Failed to detect power mode: {ex.Message}");
-                // Fallback to balanced
                 LoadConfig(App.BalancedConfigPath);
                 RestartFanControl();
             }
 
+            // Draw initial curve
+            DrawFanCurve();
+
             // Initialize Hardware Monitoring
             if (ECUtils.Init())
             {
-                System.Diagnostics.Debug.WriteLine("ECUtils.Init() returned true in MainWindow");
+                Debug.WriteLine("ECUtils.Init() returned true in MainWindow");
                 var timer = new DispatcherTimer();
                 timer.Interval = TimeSpan.FromSeconds(1);
                 timer.Tick += (s, e) =>
@@ -443,8 +511,6 @@ namespace Lenovo_Fan_Controller
                         int cpuFan = ECUtils.ReadFan1Rpm();
                         int gpuFan = ECUtils.ReadFan2Rpm();
 
-                        System.Diagnostics.Debug.WriteLine($"Tick: CPU={cpuTemp}, GPU={gpuTemp}, Fan1={cpuFan}, Fan2={gpuFan}");
-
                         MonitorCpuTemp.Text = $"{cpuTemp} °C";
                         MonitorGpuTemp.Text = $"{gpuTemp} °C";
                         MonitorCpuFan.Text = $"{cpuFan} RPM";
@@ -452,26 +518,36 @@ namespace Lenovo_Fan_Controller
                     }
                     catch (Exception ex)
                     {
-                        System.Diagnostics.Debug.WriteLine($"Monitoring Tick Error: {ex.Message}");
+                        Debug.WriteLine($"Monitoring Tick Error: {ex.Message}");
                     }
                 };
                 timer.Start();
             }
             else
             {
-                System.Diagnostics.Debug.WriteLine("ECUtils.Init() returned false in MainWindow");
+                Debug.WriteLine("ECUtils.Init() returned false in MainWindow");
             }
         }
 
-        private void SetActiveProfileUI(string profile)
+        private void SetActiveProfileButton(string profile)
         {
-            foreach (NavigationViewItem item in NavigationView.MenuItems)
+            // Reset all buttons
+            DefaultBtn.Opacity = 0.6;
+            PerformanceBtn.Opacity = 0.6;
+            QuietBtn.Opacity = 0.6;
+
+            // Highlight active button
+            switch (profile)
             {
-                if (item.Tag.ToString() == profile)
-                {
-                    NavigationView.SelectedItem = item;
+                case "default":
+                    DefaultBtn.Opacity = 1.0;
                     break;
-                }
+                case "performance":
+                    PerformanceBtn.Opacity = 1.0;
+                    break;
+                case "quiet":
+                    QuietBtn.Opacity = 1.0;
+                    break;
             }
         }
 
@@ -481,7 +557,6 @@ namespace Lenovo_Fan_Controller
             _isWindowReady = true;
             this.Activated -= MainWindow_Activated;
 
-            // If we should start minimized, hide the window again
             if (_shouldStartMinimized)
             {
                 HideWindow();
@@ -492,7 +567,6 @@ namespace Lenovo_Fan_Controller
         {
             try
             {
-                // Remove the await from TryEnqueue since it returns bool
                 DispatcherQueue.TryEnqueue(async () =>
                 {
                     var dialog = new ContentDialog
@@ -521,23 +595,8 @@ namespace Lenovo_Fan_Controller
             }
         }
 
-        private void LoadInitialConfig()
-        {
-            LoadConfig(App.BalancedConfigPath);
-            DeviceSelector.SelectedIndex = currentConfig.LegionGeneration == 5 ? 0 : 1;
-        }
-        private void UpdateDeviceSelector()//
-        {
-            if (DeviceSelector == null || currentConfig == null) return;
+        #region Config Management
 
-            try
-            {
-                DeviceSelector.SelectedIndex = currentConfig.LegionGeneration == 5 ? 0 : 1;
-            }
-            catch (Exception ex)
-            {
-            }
-        }
         private void LoadConfig(string configPath)
         {
             try
@@ -552,26 +611,47 @@ namespace Lenovo_Fan_Controller
                     .ToArray();
 
                 currentConfig = ParseConfig(lines);
-                UpdateUI();
-
+                LoadCurvePointsFromConfig();
                 UpdateDeviceSelector();
             }
             catch (Exception ex)
             {
                 _ = ShowDialogSafeAsync("Config Error", $"Failed to load config: {ex.Message}");
                 currentConfig = CreateDefaultConfig();
+                InitializeCurvePoints(5);
                 UpdateDeviceSelector();
             }
         }
 
+        private void LoadCurvePointsFromConfig()
+        {
+            int pointCount = currentConfig.CpuTempsRampUp.Length;
+            cpuCurvePoints.Clear();
+            gpuCurvePoints.Clear();
+
+            for (int i = 0; i < pointCount; i++)
+            {
+                cpuCurvePoints.Add(new CurvePoint
+                {
+                    Temp = currentConfig.CpuTempsRampUp[i],
+                    Rpm = currentConfig.FanRpmPoints[i]
+                });
+
+                gpuCurvePoints.Add(new CurvePoint
+                {
+                    Temp = currentConfig.GpuTempsRampUp[i],
+                    Rpm = currentConfig.FanRpmPoints[i]
+                });
+            }
+
+            UpdatePointCountText();
+            DrawFanCurve();
+        }
+
         private FanConfig ParseConfig(string[] lines)
         {
-
             return new FanConfig
-
             {
-                //TODO: Check if Legion Gen 5 or 6th
-                //      Check if sys has info about max rpm for fans to automatically set the max.
                 LegionGeneration = GetConfigValue(lines, "legion_gen", 5),
                 FanCurvePoints = GetConfigValue(lines, "fan_curve_points", 5),
                 AccelerationValue = GetConfigValue(lines, "fan_accl_value", 2),
@@ -582,7 +662,8 @@ namespace Lenovo_Fan_Controller
                 GpuTempsRampUp = GetConfigArray(lines, "gpu_temps_ramp_up", new[] { 30, 50, 55, 60, 63 }),
                 GpuTempsRampDown = GetConfigArray(lines, "gpu_temps_ramp_down", new[] { 28, 48, 53, 58, 61 }),
                 HstTempsRampUp = GetConfigArray(lines, "hst_temps_ramp_up", new[] { 30, 50, 55, 65, 70 }),
-                HstTempsRampDown = GetConfigArray(lines, "hst_temps_ramp_down", new[] { 28, 48, 53, 63, 68 })
+                HstTempsRampDown = GetConfigArray(lines, "hst_temps_ramp_down", new[] { 28, 48, 53, 63, 68 }),
+                Hysteresis = GetConfigValue(lines, "hysteresis", 3)
             };
         }
 
@@ -637,7 +718,8 @@ namespace Lenovo_Fan_Controller
                 GpuTempsRampUp = new[] { 30, 50, 55, 60, 63 },
                 GpuTempsRampDown = new[] { 28, 48, 53, 58, 61 },
                 HstTempsRampUp = new[] { 30, 50, 55, 65, 70 },
-                HstTempsRampDown = new[] { 28, 48, 53, 63, 68 }
+                HstTempsRampDown = new[] { 28, 48, 53, 63, 68 },
+                Hysteresis = 3
             };
         }
 
@@ -656,72 +738,19 @@ hst_temps_ramp_up : 30 50 55 65 70
 hst_temps_ramp_down : 28 48 53 63 68";
         }
 
-        private string GetValue(string[] lines, string key)
-        {
-            return lines.FirstOrDefault(l => l.StartsWith(key))?.Split(':')[1].Trim();
-        }
-
-        private int[] GetIntArray(string value)
-        {
-            return value.Split(new[] { ' ' }, StringSplitOptions.RemoveEmptyEntries)
-                       .Select(int.Parse).ToArray();
-        }
-
-        private void UpdateUI()
-        {
-            Slider1.Value = currentConfig.FanRpmPoints[0];
-            Slider2.Value = currentConfig.FanRpmPoints[1];
-            Slider3.Value = currentConfig.FanRpmPoints[2];
-            Slider4.Value = currentConfig.FanRpmPoints[3];
-            Slider5.Value = currentConfig.FanRpmPoints[4];
-
-            CpuTemp1.Value = currentConfig.CpuTempsRampUp[0];
-            CpuTemp2.Value = currentConfig.CpuTempsRampUp[1];
-            CpuTemp3.Value = currentConfig.CpuTempsRampUp[2];
-            CpuTemp4.Value = currentConfig.CpuTempsRampUp[3];
-            CpuTemp5.Value = currentConfig.CpuTempsRampUp[4];
-
-            GpuTemp1.Value = currentConfig.GpuTempsRampUp[0];
-            GpuTemp2.Value = currentConfig.GpuTempsRampUp[1];
-            GpuTemp3.Value = currentConfig.GpuTempsRampUp[2];
-            GpuTemp4.Value = currentConfig.GpuTempsRampUp[3];
-            GpuTemp5.Value = currentConfig.GpuTempsRampUp[4];
-
-            AccVal.Value = currentConfig.AccelerationValue;
-            DecVal.Value = currentConfig.DecelerationValue;
-            UpdateDeviceSelector();
-
-            ProfileText.Text = $"Profile: \"{currentProfile.ToUpper()}\"";
-        }
-
         private void SaveConfig()
         {
             try
             {
-                currentConfig.FanCurvePoints = 5;
-                // Update fan RPMs and acceleration values
-                currentConfig.FanRpmPoints = new[] {
-            (int)Slider1.Value, (int)Slider2.Value,
-            (int)Slider3.Value, (int)Slider4.Value,
-            (int)Slider5.Value
-        };
+                currentConfig.FanCurvePoints = cpuCurvePoints.Count;
                 currentConfig.AccelerationValue = (int)AccVal.Value;
                 currentConfig.DecelerationValue = (int)DecVal.Value;
 
-                // Update from UI �
-                currentConfig.CpuTempsRampUp = new[] {
-            (int)CpuTemp1.Value, (int)CpuTemp2.Value,
-            (int)CpuTemp3.Value, (int)CpuTemp4.Value,
-            (int)CpuTemp5.Value
-        };
+                // Extract RPM and temps from curve points
+                currentConfig.FanRpmPoints = cpuCurvePoints.Select(p => p.Rpm).ToArray();
+                currentConfig.CpuTempsRampUp = cpuCurvePoints.Select(p => p.Temp).ToArray();
+                currentConfig.GpuTempsRampUp = gpuCurvePoints.Select(p => p.Temp).ToArray();
 
-                currentConfig.GpuTempsRampUp = new[] {
-            (int)GpuTemp1.Value, (int)GpuTemp2.Value,
-            (int)GpuTemp3.Value, (int)GpuTemp4.Value,
-            (int)GpuTemp5.Value
-        };
-
-                // Config path
                 string configPath = currentProfile switch
                 {
                     "performance" => App.PerformanceConfigPath,
@@ -729,27 +758,30 @@ hst_temps_ramp_down : 28 48 53 63 68";
                     _ => App.BalancedConfigPath
                 };
 
-                // Generate config
                 string configContent = GenerateConfigContent();
                 File.WriteAllText(configPath, configContent);
 
-                ShowSuccessDialog("Success", "Configuration saved successfully!");
+                string fileName = System.IO.Path.GetFileName(configPath);
+                ShowSuccessDialog("Configuration Saved",
+                    $"Saved to: {fileName}\n\nPath: {configPath}\n\nContent:\n{configContent}");
             }
             catch (Exception ex)
             {
                 ShowErrorDialog("Error Saving Config", $"Failed to save configuration: {ex.Message}");
             }
         }
+
         private string GenerateConfigContent()
         {
-            // Auto-calc 3�C lower than ramp_up
-            int[] cpuRampDown = currentConfig.CpuTempsRampUp.Select(t => Math.Max(0, t - 3)).ToArray();
-            int[] gpuRampDown = currentConfig.GpuTempsRampUp.Select(t => Math.Max(0, t - 3)).ToArray();
+            int h = currentConfig.Hysteresis == 0 ? 3 : currentConfig.Hysteresis;
+            int[] cpuRampDown = currentConfig.CpuTempsRampUp.Select(t => Math.Max(0, t - h)).ToArray();
+            int[] gpuRampDown = currentConfig.GpuTempsRampUp.Select(t => Math.Max(0, t - h)).ToArray();
 
             return $@"legion_gen : {currentConfig.LegionGeneration}
 fan_curve_points : {currentConfig.FanCurvePoints}
 fan_accl_value : {currentConfig.AccelerationValue}
 fan_deccl_value : {currentConfig.DecelerationValue}
+hysteresis : {h}
 fan_rpm_points : {string.Join(" ", currentConfig.FanRpmPoints)}
 cpu_temps_ramp_up : {string.Join(" ", currentConfig.CpuTempsRampUp)}
 cpu_temps_ramp_down : {string.Join(" ", cpuRampDown)}
@@ -759,71 +791,710 @@ hst_temps_ramp_up : {string.Join(" ", currentConfig.GpuTempsRampUp)}
 hst_temps_ramp_down : {string.Join(" ", gpuRampDown)}";
         }
 
-        private async void ShowErrorDialog(string title, string message)
+        private void UpdateDeviceSelector()
         {
-            var dialog = new ContentDialog
-            {
-                Title = title,
-                Content = message,
-                CloseButtonText = "OK"
-            };
+            if (DeviceSelector == null || currentConfig == null) return;
 
-            if (this.Content != null)
-            {
-                dialog.XamlRoot = this.Content.XamlRoot;
-            }
-
-            _ = await dialog.ShowAsync();
-        }
-
-        private async void ShowSuccessDialog(string title, string message)
-        {
-            ContentDialog dialog = new()
-            {
-                Title = title,
-                Content = message,
-                CloseButtonText = "OK",
-                XamlRoot = this.Content.XamlRoot
-            };
-            await dialog.ShowAsync();
-        }
-        private void RestartFanControl()
-        {
             try
             {
-                foreach (var process in Process.GetProcessesByName("FanControl"))
-                {
-                    try
-                    {
-                        process.Kill();
-                        process.WaitForExit(1000);
-                    }
-                    catch (Exception ex)
-                    {
-                    }
-                }
-                var startInfo = new ProcessStartInfo
-                {
-                    FileName = App.FanControlPath,
-                    UseShellExecute = false,
-                    CreateNoWindow = true,
-                    WindowStyle = ProcessWindowStyle.Hidden
-                };
-
-                Process.Start(startInfo);
+                DeviceSelector.SelectedIndex = currentConfig.LegionGeneration == 5 ? 0 : 1;
             }
             catch (Exception ex)
             {
+                Debug.WriteLine($"UpdateDeviceSelector error: {ex.Message}");
+            }
+        }
 
-                ShowErrorDialog("Fan Control Error", $"Failed to restart fan control: {ex.Message}");
+        #endregion
+
+        #region Fan Curve Drawing
+
+        private void FanCurveCanvas_SizeChanged(object sender, SizeChangedEventArgs e)
+        {
+            DrawFanCurve();
+        }
+
+        private void CpuCurveBtn_Click(object sender, RoutedEventArgs e)
+        {
+            CpuCurveBtn.IsChecked = true;
+            GpuCurveBtn.IsChecked = false;
+            currentEditingCurve = "cpu";
+            UpdateCurveInfo();
+            DrawFanCurve();
+        }
+
+        private void GpuCurveBtn_Click(object sender, RoutedEventArgs e)
+        {
+            CpuCurveBtn.IsChecked = false;
+            GpuCurveBtn.IsChecked = true;
+            currentEditingCurve = "gpu";
+            UpdateCurveInfo();
+            DrawFanCurve();
+        }
+
+        private void UpdateCurveInfo()
+        {
+            if (CurveInfoText != null)
+            {
+                if (currentEditingCurve == "cpu")
+                {
+                    CurveInfoText.Text = "Click and drag points to adjust the CPU fan curve.";
+                }
+                else
+                {
+                    CurveInfoText.Text = "Adjust GPU temperature points. RPM values mirror the CPU curve.";
+                }
+            }
+        }
+
+        private void DrawFanCurve()
+        {
+            if (FanCurveCanvas == null || FanCurveCanvas.ActualWidth == 0) return;
+
+            FanCurveCanvas.Children.Clear();
+
+            double width = FanCurveCanvas.ActualWidth;
+            double height = FanCurveCanvas.ActualHeight;
+            double graphWidth = width - 2 * GRAPH_MARGIN;
+            double graphHeight = height - 2 * GRAPH_MARGIN;
+
+            // Draw grid
+            DrawGrid(graphWidth, graphHeight);
+
+            // Draw axes
+            DrawAxes(graphWidth, graphHeight);
+
+            // Draw curve based on selected mode
+            var points = currentEditingCurve == "cpu" ? cpuCurvePoints : gpuCurvePoints;
+            var curveColor = currentEditingCurve == "cpu" ?
+                Application.Current.Resources["SystemAccentColor"] as Windows.UI.Color? ?? Colors.DodgerBlue :
+                Colors.LimeGreen;
+
+            DrawCurve(points, graphWidth, graphHeight, curveColor, currentEditingCurve);
+        }
+
+        private void DrawGrid(double graphWidth, double graphHeight)
+        {
+            // Use theme-aware grid color
+            var gridBrush = Application.Current.Resources["CardStrokeColorDefaultBrush"] as SolidColorBrush ??
+                            new SolidColorBrush(Windows.UI.Color.FromArgb(40, 255, 255, 255));
+
+            // Vertical grid lines (temperature)
+            for (int temp = MIN_TEMP; temp <= MAX_TEMP; temp += 10)
+            {
+                double x = GRAPH_MARGIN + (temp - MIN_TEMP) / (double)(MAX_TEMP - MIN_TEMP) * graphWidth;
+                var line = new Line
+                {
+                    X1 = x,
+                    Y1 = GRAPH_MARGIN,
+                    X2 = x,
+                    Y2 = GRAPH_MARGIN + graphHeight,
+                    Stroke = gridBrush,
+                    StrokeThickness = 1,
+                    Opacity = 0.3
+                };
+                FanCurveCanvas.Children.Add(line);
             }
 
-        }
-        private async void NavigationView_SelectionChanged(NavigationView sender, NavigationViewSelectionChangedEventArgs args)
-        {
-            if (args.SelectedItem is NavigationViewItem selectedItem)
+            // Horizontal grid lines (RPM)
+            for (int rpm = MIN_RPM; rpm <= MAX_RPM; rpm += 500)
             {
-                string newProfile = selectedItem.Tag.ToString();
+                double y = GRAPH_MARGIN + graphHeight - ((rpm - MIN_RPM) / (double)(MAX_RPM - MIN_RPM) * graphHeight);
+                var line = new Line
+                {
+                    X1 = GRAPH_MARGIN,
+                    Y1 = y,
+                    X2 = GRAPH_MARGIN + graphWidth,
+                    Y2 = y,
+                    Stroke = gridBrush,
+                    StrokeThickness = 1,
+                    Opacity = 0.3
+                };
+                FanCurveCanvas.Children.Add(line);
+            }
+        }
+
+        private void DrawAxes(double graphWidth, double graphHeight)
+        {
+            // Use theme-aware colors
+            var axisBrush = Application.Current.Resources["TextFillColorPrimaryBrush"] as SolidColorBrush ??
+                            new SolidColorBrush(Colors.White);
+            var textBrush = Application.Current.Resources["TextFillColorSecondaryBrush"] as SolidColorBrush ??
+                            new SolidColorBrush(Windows.UI.Color.FromArgb(180, 255, 255, 255));
+
+            // X-axis
+            var xAxis = new Line
+            {
+                X1 = GRAPH_MARGIN,
+                Y1 = GRAPH_MARGIN + graphHeight,
+                X2 = GRAPH_MARGIN + graphWidth,
+                Y2 = GRAPH_MARGIN + graphHeight,
+                Stroke = axisBrush,
+                StrokeThickness = 2
+            };
+            FanCurveCanvas.Children.Add(xAxis);
+
+            // Y-axis
+            var yAxis = new Line
+            {
+                X1 = GRAPH_MARGIN,
+                Y1 = GRAPH_MARGIN,
+                X2 = GRAPH_MARGIN,
+                Y2 = GRAPH_MARGIN + graphHeight,
+                Stroke = axisBrush,
+                StrokeThickness = 2
+            };
+            FanCurveCanvas.Children.Add(yAxis);
+
+            // X-axis labels (Temperature)
+            for (int temp = MIN_TEMP; temp <= MAX_TEMP; temp += 20)
+            {
+                double x = GRAPH_MARGIN + (temp - MIN_TEMP) / (double)(MAX_TEMP - MIN_TEMP) * graphWidth;
+                var label = new TextBlock
+                {
+                    Text = $"{temp}°",
+                    Foreground = textBrush,
+                    FontSize = 10
+                };
+                Canvas.SetLeft(label, x - 10);
+                Canvas.SetTop(label, GRAPH_MARGIN + graphHeight + 5);
+                FanCurveCanvas.Children.Add(label);
+            }
+
+            // Y-axis labels (RPM)
+            for (int rpm = MIN_RPM; rpm <= MAX_RPM; rpm += 1000)
+            {
+                double y = GRAPH_MARGIN + graphHeight - ((rpm - MIN_RPM) / (double)(MAX_RPM - MIN_RPM) * graphHeight);
+                var label = new TextBlock
+                {
+                    Text = $"{rpm}",
+                    Foreground = textBrush,
+                    FontSize = 10
+                };
+                Canvas.SetLeft(label, 5);
+                Canvas.SetTop(label, y - 7);
+                FanCurveCanvas.Children.Add(label);
+            }
+
+            // Axis titles
+            var xTitle = new TextBlock
+            {
+                Text = "Temperature (°C)",
+                Foreground = textBrush,
+                FontSize = 11,
+                FontWeight = Microsoft.UI.Text.FontWeights.SemiBold
+            };
+            Canvas.SetLeft(xTitle, GRAPH_MARGIN + graphWidth / 2 - 50);
+            Canvas.SetTop(xTitle, GRAPH_MARGIN + graphHeight + 25);
+            FanCurveCanvas.Children.Add(xTitle);
+
+            var yTitle = new TextBlock
+            {
+                Text = currentEditingCurve == "cpu" ? "Fan RPM" : "Fan RPM (mirrors CPU)",
+                Foreground = textBrush,
+                FontSize = 11,
+                FontWeight = Microsoft.UI.Text.FontWeights.SemiBold
+            };
+            Canvas.SetLeft(yTitle, 5);
+            Canvas.SetTop(yTitle, 5);
+            FanCurveCanvas.Children.Add(yTitle);
+        }
+
+        private void DrawCurve(List<CurvePoint> points, double graphWidth, double graphHeight, Windows.UI.Color color, string curveType)
+        {
+            if (points.Count < 2) return;
+
+            var curveBrush = new SolidColorBrush(color);
+            var pointBrush = new SolidColorBrush(color);
+
+            // Calculate all point positions first
+            var positions = new List<Windows.Foundation.Point>();
+            foreach (var point in points)
+            {
+                double x = GRAPH_MARGIN + (point.Temp - MIN_TEMP) / (double)(MAX_TEMP - MIN_TEMP) * graphWidth;
+                double y = GRAPH_MARGIN + graphHeight - ((point.Rpm - MIN_RPM) / (double)(MAX_RPM - MIN_RPM) * graphHeight);
+                positions.Add(new Windows.Foundation.Point(x, y));
+            }
+
+            // Create gradient fill below the curve
+            var fillPath = new Microsoft.UI.Xaml.Shapes.Path();
+            var fillGeometry = new PathGeometry();
+            var fillFigure = new PathFigure();
+
+            // Start from bottom-left
+            fillFigure.StartPoint = new Windows.Foundation.Point(positions[0].X, GRAPH_MARGIN + graphHeight);
+
+            // Line up to first point
+            fillFigure.Segments.Add(new LineSegment { Point = positions[0] });
+
+            // Create smooth curve through all points using bezier curves
+            for (int i = 0; i < positions.Count - 1; i++)
+            {
+                var p0 = positions[Math.Max(0, i - 1)];
+                var p1 = positions[i];
+                var p2 = positions[i + 1];
+                var p3 = positions[Math.Min(positions.Count - 1, i + 2)];
+
+                // Calculate control points for smooth bezier curve
+                double tension = 0.1; // Smoothness factor (0 = sharp corners, 1 = very smooth)
+
+                var cp1 = new Windows.Foundation.Point(
+                    p1.X + (p2.X - p0.X) * tension,
+                    p1.Y + (p2.Y - p0.Y) * tension
+                );
+
+                var cp2 = new Windows.Foundation.Point(
+                    p2.X - (p3.X - p1.X) * tension,
+                    p2.Y - (p3.Y - p1.Y) * tension
+                );
+
+                fillFigure.Segments.Add(new BezierSegment
+                {
+                    Point1 = cp1,
+                    Point2 = cp2,
+                    Point3 = p2
+                });
+            }
+
+            // Line down to bottom-right
+            fillFigure.Segments.Add(new LineSegment
+            {
+                Point = new Windows.Foundation.Point(positions[positions.Count - 1].X, GRAPH_MARGIN + graphHeight)
+            });
+
+            fillGeometry.Figures.Add(fillFigure);
+            fillPath.Data = fillGeometry;
+
+            // Create gradient brush for fill
+            var gradientBrush = new LinearGradientBrush
+            {
+                StartPoint = new Windows.Foundation.Point(0, 0),
+                EndPoint = new Windows.Foundation.Point(0, 1)
+            };
+
+            gradientBrush.GradientStops.Add(new GradientStop
+            {
+                Color = Windows.UI.Color.FromArgb(80, color.R, color.G, color.B),
+                Offset = 0
+            });
+            gradientBrush.GradientStops.Add(new GradientStop
+            {
+                Color = Windows.UI.Color.FromArgb(20, color.R, color.G, color.B),
+                Offset = 0.5
+            });
+            gradientBrush.GradientStops.Add(new GradientStop
+            {
+                Color = Windows.UI.Color.FromArgb(5, color.R, color.G, color.B),
+                Offset = 1
+            });
+
+            fillPath.Fill = gradientBrush;
+            FanCurveCanvas.Children.Add(fillPath);
+
+            // Draw smooth curve line on top
+            var curvePath = new Microsoft.UI.Xaml.Shapes.Path();
+            var curveGeometry = new PathGeometry();
+            var curveFigure = new PathFigure { StartPoint = positions[0] };
+
+            // Create smooth curve through all points
+            for (int i = 0; i < positions.Count - 1; i++)
+            {
+                var p0 = positions[Math.Max(0, i - 1)];
+                var p1 = positions[i];
+                var p2 = positions[i + 1];
+                var p3 = positions[Math.Min(positions.Count - 1, i + 2)];
+
+                double tension = 0.1;
+
+                var cp1 = new Windows.Foundation.Point(
+                    p1.X + (p2.X - p0.X) * tension,
+                    p1.Y + (p2.Y - p0.Y) * tension
+                );
+
+                var cp2 = new Windows.Foundation.Point(
+                    p2.X - (p3.X - p1.X) * tension,
+                    p2.Y - (p3.Y - p1.Y) * tension
+                );
+
+                curveFigure.Segments.Add(new BezierSegment
+                {
+                    Point1 = cp1,
+                    Point2 = cp2,
+                    Point3 = p2
+                });
+            }
+
+            curveGeometry.Figures.Add(curveFigure);
+            curvePath.Data = curveGeometry;
+            curvePath.Stroke = curveBrush;
+            curvePath.StrokeThickness = 3;
+            curvePath.StrokeLineJoin = PenLineJoin.Round;
+            FanCurveCanvas.Children.Add(curvePath);
+
+            // Draw points on top
+            var whiteBrush = Application.Current.Resources["TextFillColorPrimaryBrush"] as SolidColorBrush ??
+                            new SolidColorBrush(Colors.White);
+
+            for (int i = 0; i < points.Count; i++)
+            {
+                var point = points[i];
+                var pos = positions[i];
+
+                // Point circle (no number inside now)
+                var ellipse = new Ellipse
+                {
+                    Width = 20,
+                    Height = 20,
+                    Fill = pointBrush,
+                    Stroke = whiteBrush,
+                    StrokeThickness = 2,
+                    Tag = new PointTag { Point = point, IsCpu = curveType == "cpu" }
+                };
+
+                Canvas.SetLeft(ellipse, pos.X - 10);
+                Canvas.SetTop(ellipse, pos.Y - 10);
+                FanCurveCanvas.Children.Add(ellipse);
+
+                // Temperature label on TOP of point
+                var tempLabel = new TextBlock
+                {
+                    Text = $"{point.Temp}°C",
+                    FontSize = 10,
+                    Foreground = whiteBrush,
+                    Opacity = 0.9,
+                    FontWeight = Microsoft.UI.Text.FontWeights.SemiBold
+                };
+                Canvas.SetLeft(tempLabel, pos.X - 15);
+                Canvas.SetTop(tempLabel, pos.Y - 28);
+                FanCurveCanvas.Children.Add(tempLabel);
+
+                // RPM label on BOTTOM of point
+                var rpmLabel = new TextBlock
+                {
+                    Text = $"{point.Rpm}",
+                    FontSize = 10,
+                    Foreground = whiteBrush,
+                    Opacity = 0.85
+                };
+                Canvas.SetLeft(rpmLabel, pos.X - 15);
+                Canvas.SetTop(rpmLabel, pos.Y + 15);
+                FanCurveCanvas.Children.Add(rpmLabel);
+            }
+        }
+
+        #endregion
+
+        #region Point Dragging
+
+        private void FanCurveCanvas_PointerPressed(object sender, PointerRoutedEventArgs e)
+        {
+            var position = e.GetCurrentPoint(FanCurveCanvas).Position;
+            pressedPosition = position;
+            isDragging = false;
+
+            // Find if we clicked on a point (20px diameter)
+            foreach (var child in FanCurveCanvas.Children)
+            {
+                if (child is Ellipse ellipse && ellipse.Tag is PointTag tag)
+                {
+                    double left = Canvas.GetLeft(ellipse);
+                    double top = Canvas.GetTop(ellipse);
+
+                    // Check if click is within the 20px circle
+                    if (Math.Abs(position.X - (left + 10)) < 15 && Math.Abs(position.Y - (top + 10)) < 15)
+                    {
+                        draggedPoint = tag.Point;
+                        isDraggingCpu = tag.IsCpu;
+                        FanCurveCanvas.CapturePointer(e.Pointer);
+                        e.Handled = true;
+                        return;
+                    }
+                }
+            }
+        }
+
+        private void FanCurveCanvas_PointerMoved(object sender, PointerRoutedEventArgs e)
+        {
+            if (draggedPoint == null || SettingsManager.GetLockPoints()) return;
+
+            var position = e.GetCurrentPoint(FanCurveCanvas).Position;
+
+            // Check if we've moved enough to consider it a drag (threshold of 5 pixels)
+            if (!isDragging)
+            {
+                double distance = Math.Sqrt(
+                    Math.Pow(position.X - pressedPosition.X, 2) +
+                    Math.Pow(position.Y - pressedPosition.Y, 2));
+
+                if (distance < 5)
+                {
+                    return; // Not dragging yet
+                }
+
+                isDragging = true;
+            }
+
+            double graphWidth = FanCurveCanvas.ActualWidth - 2 * GRAPH_MARGIN;
+            double graphHeight = FanCurveCanvas.ActualHeight - 2 * GRAPH_MARGIN;
+
+            // Get the list we're working with
+            var points = currentEditingCurve == "cpu" ? cpuCurvePoints : gpuCurvePoints;
+            int pointIndex = points.IndexOf(draggedPoint);
+            if (pointIndex < 0) return;
+
+            if (currentEditingCurve == "cpu")
+            {
+                // CPU mode: can change both temp and RPM with chain movement
+                double tempPercent = (position.X - GRAPH_MARGIN) / graphWidth;
+                double rpmPercent = 1 - (position.Y - GRAPH_MARGIN) / graphHeight;
+
+                int newTemp = (int)Math.Clamp(MIN_TEMP + (MAX_TEMP - MIN_TEMP) * tempPercent, MIN_TEMP, MAX_TEMP);
+                int rawRpm = (int)Math.Clamp(MIN_RPM + (MAX_RPM - MIN_RPM) * rpmPercent, MIN_RPM, MAX_RPM);
+
+                // Snap to 50 RPM intervals
+                int newRpm = (int)(Math.Round(rawRpm / 50.0) * 50);
+                newRpm = (int)Math.Clamp(newRpm, MIN_RPM, MAX_RPM);
+
+                // Constrain temperature: can't pass previous or next point
+                if (pointIndex > 0)
+                {
+                    newTemp = Math.Max(newTemp, points[pointIndex - 1].Temp + 1);
+                }
+                if (pointIndex < points.Count - 1)
+                {
+                    newTemp = Math.Min(newTemp, points[pointIndex + 1].Temp - 1);
+                }
+
+                int oldRpm = draggedPoint.Rpm;
+
+                // DIRECTIONAL CHAIN MOVEMENT LOGIC
+                if (newRpm > oldRpm)
+                {
+                    // Moving UP: only affect this point and points AFTER it at the same level
+                    int chainEnd = pointIndex;
+
+                    // Find how many consecutive points after this one share the same RPM
+                    while (chainEnd < points.Count - 1 && points[chainEnd + 1].Rpm == oldRpm)
+                    {
+                        chainEnd++;
+                    }
+
+                    // Constrain by the first point AFTER the chain
+                    if (chainEnd < points.Count - 1)
+                    {
+                        newRpm = Math.Min(newRpm, points[chainEnd + 1].Rpm);
+                    }
+
+                    // Move this point and all points after it that share the same RPM
+                    for (int i = pointIndex; i <= chainEnd; i++)
+                    {
+                        points[i].Rpm = newRpm;
+                    }
+                }
+                else if (newRpm < oldRpm)
+                {
+                    // Moving DOWN: only affect this point and points BEFORE it at the same level
+                    int chainStart = pointIndex;
+
+                    // Find how many consecutive points before this one share the same RPM
+                    while (chainStart > 0 && points[chainStart - 1].Rpm == oldRpm)
+                    {
+                        chainStart--;
+                    }
+
+                    // Constrain by the first point BEFORE the chain
+                    if (chainStart > 0)
+                    {
+                        newRpm = Math.Max(newRpm, points[chainStart - 1].Rpm);
+                    }
+
+                    // Move this point and all points before it that share the same RPM
+                    for (int i = chainStart; i <= pointIndex; i++)
+                    {
+                        points[i].Rpm = newRpm;
+                    }
+                }
+
+                draggedPoint.Temp = newTemp;
+            }
+            else
+            {
+                // GPU mode: directional push movement on Temperature (X-axis)
+                double tempPercent = (position.X - GRAPH_MARGIN) / graphWidth;
+                int newTemp = (int)Math.Clamp(MIN_TEMP + (MAX_TEMP - MIN_TEMP) * tempPercent, MIN_TEMP, MAX_TEMP);
+                int oldTemp = draggedPoint.Temp;
+
+                if (newTemp > oldTemp)
+                {
+                    // Dragging RIGHT: pushes points AFTER if hitting them
+                    draggedPoint.Temp = newTemp;
+                    for (int i = pointIndex; i < points.Count - 1; i++)
+                    {
+                        if (points[i + 1].Temp <= points[i].Temp)
+                        {
+                            points[i + 1].Temp = points[i].Temp + 1;
+                        }
+                        else
+                        {
+                            break;
+                        }
+                    }
+
+                    // If pushed beyond MAX_TEMP, cap and cascade back
+                    if (points[points.Count - 1].Temp > MAX_TEMP)
+                    {
+                        points[points.Count - 1].Temp = MAX_TEMP;
+                        for (int i = points.Count - 1; i > 0; i--)
+                        {
+                            if (points[i - 1].Temp >= points[i].Temp)
+                                points[i - 1].Temp = points[i].Temp - 1;
+                        }
+                    }
+                }
+                else if (newTemp < oldTemp)
+                {
+                    // Dragging LEFT: pushes points BEFORE if hitting them
+                    draggedPoint.Temp = newTemp;
+                    for (int i = pointIndex; i > 0; i--)
+                    {
+                        if (points[i - 1].Temp >= points[i].Temp)
+                        {
+                            points[i - 1].Temp = points[i].Temp - 1;
+                        }
+                        else
+                        {
+                            break;
+                        }
+                    }
+
+                    // If pushed before MIN_TEMP, cap and cascade forward
+                    if (points[0].Temp < MIN_TEMP)
+                    {
+                        points[0].Temp = MIN_TEMP;
+                        for (int i = 0; i < points.Count - 1; i++)
+                        {
+                            if (points[i + 1].Temp <= points[i].Temp)
+                                points[i + 1].Temp = points[i].Temp + 1;
+                        }
+                    }
+                }
+            }
+
+            DrawFanCurve();
+            e.Handled = true;
+        }
+
+        private async void FanCurveCanvas_PointerReleased(object sender, PointerRoutedEventArgs e)
+        {
+            if (draggedPoint != null)
+            {
+                // Check if it was a click (not a drag)
+                if (!isDragging)
+                {
+                    // Show flyout to edit point
+                    await ShowPointEditorFlyout(draggedPoint);
+                }
+
+                draggedPoint = null;
+                isDragging = false;
+                FanCurveCanvas.ReleasePointerCaptures();
+                DrawFanCurve();
+            }
+        }
+
+        private async Task ShowPointEditorFlyout(CurvePoint point)
+        {
+            var stackPanel = new StackPanel { Spacing = 12, MinWidth = 250 };
+
+            // Temperature input
+            var tempLabel = new TextBlock { Text = "Temperature (°C):", FontWeight = Microsoft.UI.Text.FontWeights.SemiBold };
+            var tempBox = new NumberBox
+            {
+                Value = point.Temp,
+                Minimum = MIN_TEMP,
+                Maximum = MAX_TEMP,
+                SpinButtonPlacementMode = NumberBoxSpinButtonPlacementMode.Compact
+            };
+
+            // RPM input (only for CPU mode)
+            var rpmLabel = new TextBlock
+            {
+                Text = currentEditingCurve == "cpu" ? "RPM:" : "RPM (mirrors CPU):",
+                FontWeight = Microsoft.UI.Text.FontWeights.SemiBold
+            };
+            var rpmBox = new NumberBox
+            {
+                Value = point.Rpm,
+                Minimum = MIN_RPM,
+                Maximum = MAX_RPM,
+                SpinButtonPlacementMode = NumberBoxSpinButtonPlacementMode.Compact,
+                IsEnabled = currentEditingCurve == "cpu"
+            };
+
+            stackPanel.Children.Add(tempLabel);
+            stackPanel.Children.Add(tempBox);
+            stackPanel.Children.Add(rpmLabel);
+            stackPanel.Children.Add(rpmBox);
+
+            var dialog = new ContentDialog
+            {
+                Title = $"Edit Point ({currentEditingCurve.ToUpper()} Curve)",
+                Content = stackPanel,
+                PrimaryButtonText = "✓ Apply",
+                CloseButtonText = "✕ Cancel",
+                DefaultButton = ContentDialogButton.Primary,
+                XamlRoot = this.Content?.XamlRoot
+            };
+
+            var result = await dialog.ShowAsync();
+
+            if (result == ContentDialogResult.Primary)
+            {
+                var points = currentEditingCurve == "cpu" ? cpuCurvePoints : gpuCurvePoints;
+                int pointIndex = points.IndexOf(point);
+
+                if (pointIndex >= 0)
+                {
+                    int newTemp = (int)tempBox.Value;
+                    int newRpm = (int)rpmBox.Value;
+
+                    // Apply constraints
+                    if (pointIndex > 0)
+                    {
+                        newTemp = Math.Max(newTemp, points[pointIndex - 1].Temp + 1);
+                    }
+                    if (pointIndex < points.Count - 1)
+                    {
+                        newTemp = Math.Min(newTemp, points[pointIndex + 1].Temp - 1);
+                    }
+
+                    if (currentEditingCurve == "cpu")
+                    {
+                        if (pointIndex > 0)
+                        {
+                            newRpm = Math.Max(newRpm, points[pointIndex - 1].Rpm);
+                        }
+                        if (pointIndex < points.Count - 1)
+                        {
+                            newRpm = Math.Min(newRpm, points[pointIndex + 1].Rpm);
+                        }
+                        point.Rpm = newRpm;
+                    }
+
+                    point.Temp = newTemp;
+                    DrawFanCurve();
+                }
+            }
+        }
+
+        #endregion
+
+        #region Event Handlers
+
+        private async void ProfileButton_Click(object sender, RoutedEventArgs e)
+        {
+            if (sender is Button button && button.Tag is string newProfile)
+            {
                 var powerMode = newProfile switch
                 {
                     "quiet" => PowerModeHelper.LegionPowerMode.Quiet,
@@ -845,12 +1516,6 @@ hst_temps_ramp_down : {string.Join(" ", gpuRampDown)}";
                             "2. Lenovo Vantage/WMI services are running\n" +
                             "3. Your model supports power mode switching");
 
-                        // Revert UI to current actual mode
-                        var actualMode = PowerModeHelper.GetCurrentPowerMode();
-                        string actualProfile = PowerModeHelper.PowerModeToProfile(actualMode);
-                        sender.SelectedItem = NavigationView.MenuItems
-                            .OfType<NavigationViewItem>()
-                            .FirstOrDefault(item => item.Tag.ToString() == actualProfile);
                         return;
                     }
 
@@ -864,6 +1529,7 @@ hst_temps_ramp_down : {string.Join(" ", gpuRampDown)}";
 
                     LoadConfig(configPath);
                     RestartFanControl();
+                    SetActiveProfileButton(newProfile);
                 }
                 finally
                 {
@@ -874,9 +1540,10 @@ hst_temps_ramp_down : {string.Join(" ", gpuRampDown)}";
 
         private void SetLoadingState(bool isLoading)
         {
-            // Visual feedback during mode change
             ProgressRing.Visibility = isLoading ? Visibility.Visible : Visibility.Collapsed;
-            NavigationView.IsEnabled = !isLoading;
+            DefaultBtn.IsEnabled = !isLoading;
+            PerformanceBtn.IsEnabled = !isLoading;
+            QuietBtn.IsEnabled = !isLoading;
         }
 
         private void DeviceSelector_SelectionChanged(object sender, SelectionChangedEventArgs e)
@@ -884,7 +1551,6 @@ hst_temps_ramp_down : {string.Join(" ", gpuRampDown)}";
             if (DeviceSelector.SelectedItem is ComboBoxItem selectedItem && currentConfig != null)
             {
                 currentConfig.LegionGeneration = selectedItem.Content.ToString().Contains("5th") ? 5 : 6;
-
             }
         }
 
@@ -920,50 +1586,134 @@ hst_temps_ramp_down : {string.Join(" ", gpuRampDown)}";
             }
         }
 
-        ////TURBO
-        /// Gonna implement this later.
-        /// Alternative is Settings > Enable 5000RPM > Modify the profile to use 5000RPM
-        /// 
-        //private bool turboEnabled = false;
-        //private int[] originalRpmValues = new int[5];
-        //
-        //private void Turbo_Checked(object sender, RoutedEventArgs e)
-        //{
-        //    originalRpmValues[0] = (int)Slider1.Value;
-        //    originalRpmValues[1] = (int)Slider2.Value;
-        //    originalRpmValues[2] = (int)Slider3.Value;
-        //    originalRpmValues[3] = (int)Slider4.Value;
-        //    originalRpmValues[4] = (int)Slider5.Value;
-        //
-        //    // Set all fans to max RPM (4400) LEGION 5 15ANH05
-        //    // I cant find tech information about the max rpm of 5th and 6th gen, thanks lenovo
-        //    Slider1.Value = 4400;
-        //    Slider2.Value = 4400;
-        //    Slider3.Value = 4400;
-        //    Slider4.Value = 4400;
-        //    Slider5.Value = 4400;
-        //
-        //    turboEnabled = true;
-        //    Turbo.Background = new SolidColorBrush(Colors.Red);
-        //    SaveConfig();
-        //}
-        //
-        //private void Turbo_Unchecked(object sender, RoutedEventArgs e)
-        //{
-        //    // Restore
-        //    Slider1.Value = originalRpmValues[0];
-        //    Slider2.Value = originalRpmValues[1];
-        //    Slider3.Value = originalRpmValues[2];
-        //    Slider4.Value = originalRpmValues[3];
-        //    Slider5.Value = originalRpmValues[4];
-        //
-        //    turboEnabled = false;
-        //    Turbo.Background = new SolidColorBrush(Colors.Transparent);
-        //    SaveConfig();
-        //}
+        private void AddPoint_Click(object sender, RoutedEventArgs e)
+        {
+            if (cpuCurvePoints.Count >= 8)
+            {
+                _ = ShowDialogSafeAsync("Maximum Points Reached", "You can have a maximum of 8 points on the curve.");
+                return;
+            }
+
+            // Find a good spot to add a point (between existing points with largest gap)
+            int bestIndex = 0;
+            int largestGap = 0;
+
+            for (int i = 0; i < cpuCurvePoints.Count - 1; i++)
+            {
+                int gap = cpuCurvePoints[i + 1].Temp - cpuCurvePoints[i].Temp;
+                if (gap > largestGap)
+                {
+                    largestGap = gap;
+                    bestIndex = i;
+                }
+            }
+
+            // Insert new point in the middle of the largest gap
+            int newTemp = (cpuCurvePoints[bestIndex].Temp + cpuCurvePoints[bestIndex + 1].Temp) / 2;
+            int newRpm = (cpuCurvePoints[bestIndex].Rpm + cpuCurvePoints[bestIndex + 1].Rpm) / 2;
+
+            cpuCurvePoints.Insert(bestIndex + 1, new CurvePoint { Temp = newTemp, Rpm = newRpm });
+            gpuCurvePoints.Insert(bestIndex + 1, new CurvePoint { Temp = newTemp, Rpm = newRpm });
+
+            UpdatePointCountText();
+            DrawFanCurve();
+        }
+
+        private void RemovePoint_Click(object sender, RoutedEventArgs e)
+        {
+            if (cpuCurvePoints.Count <= 2)
+            {
+                _ = ShowDialogSafeAsync("Minimum Points Required", "You must have at least 2 points on the curve.");
+                return;
+            }
+
+            // Remove middle point to keep end points
+            int middleIndex = cpuCurvePoints.Count / 2;
+            cpuCurvePoints.RemoveAt(middleIndex);
+            gpuCurvePoints.RemoveAt(middleIndex);
+
+            UpdatePointCountText();
+            DrawFanCurve();
+        }
+
+        private async void ShowErrorDialog(string title, string message)
+        {
+            var dialog = new ContentDialog
+            {
+                Title = title,
+                Content = message,
+                CloseButtonText = "OK"
+            };
+
+            if (this.Content != null)
+            {
+                dialog.XamlRoot = this.Content.XamlRoot;
+            }
+
+            _ = await dialog.ShowAsync();
+        }
+
+        private async void ShowSuccessDialog(string title, string message)
+        {
+            ContentDialog dialog = new()
+            {
+                Title = title,
+                Content = message,
+                CloseButtonText = "OK",
+                XamlRoot = this.Content.XamlRoot
+            };
+            await dialog.ShowAsync();
+        }
+
+        private void RestartFanControl()
+        {
+            try
+            {
+                foreach (var process in Process.GetProcessesByName("FanControl"))
+                {
+                    try
+                    {
+                        process.Kill();
+                        process.WaitForExit(1000);
+                    }
+                    catch (Exception ex)
+                    {
+                        Debug.WriteLine($"Kill process error: {ex.Message}");
+                    }
+                }
+                var startInfo = new ProcessStartInfo
+                {
+                    FileName = App.FanControlPath,
+                    UseShellExecute = false,
+                    CreateNoWindow = true,
+                    WindowStyle = ProcessWindowStyle.Hidden
+                };
+
+                Process.Start(startInfo);
+            }
+            catch (Exception ex)
+            {
+                ShowErrorDialog("Fan Control Error", $"Failed to restart fan control: {ex.Message}");
+            }
+        }
+
+        #endregion
     }
 
-    // Helper class for window show/hide operations
+    #region Helper Classes
+
+    public class CurvePoint
+    {
+        public int Temp { get; set; }
+        public int Rpm { get; set; }
+    }
+
+    public class PointTag
+    {
+        public CurvePoint Point { get; set; }
+        public bool IsCpu { get; set; }
+    }
+
     internal static class User32
     {
         public const int SW_HIDE = 0;
@@ -975,7 +1725,6 @@ hst_temps_ramp_down : {string.Join(" ", gpuRampDown)}";
         public static extern bool ShowWindow(IntPtr hWnd, int nCmdShow);
     }
 
-    // Simple relay command implementation
     public class RelayCommand : ICommand
     {
         private readonly Action _execute;
@@ -1004,4 +1753,6 @@ hst_temps_ramp_down : {string.Join(" ", gpuRampDown)}";
             CanExecuteChanged?.Invoke(this, EventArgs.Empty);
         }
     }
+
+    #endregion
 }
