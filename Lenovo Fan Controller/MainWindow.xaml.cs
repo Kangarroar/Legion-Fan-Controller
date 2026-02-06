@@ -609,22 +609,28 @@ namespace Lenovo_Fan_Controller
 
         private void SetActiveProfileButton(string profile)
         {
+            var accentStyle = Application.Current.Resources["AccentButtonStyle"] as Style;
+
             // Reset all buttons
-            DefaultBtn.Opacity = 0.6;
-            PerformanceBtn.Opacity = 0.6;
-            QuietBtn.Opacity = 0.6;
+            DefaultBtn.Style = null;
+            PerformanceBtn.Style = null;
+            QuietBtn.Style = null;
+
+            DefaultBtn.Opacity = 1.0;
+            PerformanceBtn.Opacity = 1.0;
+            QuietBtn.Opacity = 1.0;
 
             // Highlight active button
             switch (profile)
             {
                 case "default":
-                    DefaultBtn.Opacity = 1.0;
+                    DefaultBtn.Style = accentStyle;
                     break;
                 case "performance":
-                    PerformanceBtn.Opacity = 1.0;
+                    PerformanceBtn.Style = accentStyle;
                     break;
                 case "quiet":
-                    QuietBtn.Opacity = 1.0;
+                    QuietBtn.Style = accentStyle;
                     break;
             }
         }

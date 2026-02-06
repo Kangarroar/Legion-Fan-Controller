@@ -41,8 +41,8 @@
                 <!-- Left Section -->
                 <StackPanel Grid.Column="0" Orientation="Horizontal" HorizontalAlignment="Left" Margin="16,8,0,0" Spacing="8">
                     <Button x:Name="Restart" 
-                            Width="32" Height="32"
-                            CornerRadius="4"
+                            Width="36" Height="36"
+                            CornerRadius="6"
                             Background="#3A3A3A"
                             Foreground="White"
                             Padding="0">
@@ -54,34 +54,41 @@
                 </StackPanel>
 
                 <!-- Profile Mode Buttons (Center) -->
-                <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" Grid.Column="1" Margin="0,8,0,0" Spacing="16">
-                    <Button x:Name="DefaultBtn" Content="Default" Tag="default"
-                            Style="{StaticResource AccentButtonStyle}" 
-                            Padding="24,8" FontSize="13" CornerRadius="6" 
-                            Width="120"/>
-                    <Button x:Name="PerformanceBtn" Content="Performance" Tag="performance"
-                            Style="{StaticResource AccentButtonStyle}" 
-                            Padding="24,8" FontSize="13" CornerRadius="6" 
-                            Opacity="0.6" Width="120"/>
-                    <Button x:Name="QuietBtn" Content="Quiet" Tag="quiet"
-                            Style="{StaticResource AccentButtonStyle}" 
-                            Padding="24,8" FontSize="13" CornerRadius="6" 
-                            Opacity="0.6" Width="120"/>
-                </StackPanel>
+                <Border Grid.Column="1" 
+                        BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
+                        BorderThickness="1"
+                        CornerRadius="8"
+                        Padding="4"
+                        Margin="0,8,0,0"
+                        HorizontalAlignment="Center"
+                        VerticalAlignment="Center">
+                    <StackPanel Orientation="Horizontal" Spacing="16">
+                        <Button x:Name="DefaultBtn" Content="Default" Tag="default"
+                                Padding="16,8" FontSize="13" CornerRadius="6" 
+                                Width="130"
+                                Style="{StaticResource AccentButtonStyle}"/>
+                        <Button x:Name="PerformanceBtn" Content="Performance" Tag="performance"
+                                Padding="16,8" FontSize="13" CornerRadius="6" 
+                                Width="130"/>
+                        <Button x:Name="QuietBtn" Content="Quiet" Tag="quiet"
+                                Padding="16,8" FontSize="13" CornerRadius="6" 
+                                Width="130"/>
+                    </StackPanel>
+                </Border>
 
                 <!-- Device Selector and Settings (Right) -->
-                <StackPanel Orientation="Horizontal" Grid.Column="2" Margin="0,8,16,0" Spacing="8" HorizontalAlignment="Right" VerticalAlignment="Center">
-                    <ComboBox x:Name="DeviceSelector" SelectedIndex="0" Width="140" Height="32" FontSize="12">
-                        <ComboBoxItem Tag="5" Content="Legion 5th Gen"/>
-                        <ComboBoxItem Tag="6" Content="Legion 6th Gen"/>
+                <StackPanel Orientation="Horizontal" Grid.Column="2" Margin="0,8,16,0" Spacing="6" HorizontalAlignment="Right" VerticalAlignment="Center">
+                    <ComboBox x:Name="DeviceSelector" SelectedIndex="0" Width="100" Height="36" FontSize="12">
+                        <ComboBoxItem Tag="5" Content="5th Gen"/>
+                        <ComboBoxItem Tag="6" Content="6th Gen"/>
                         <ToolTipService.ToolTip>
                             <ToolTip Content="Select your Lenovo Legion Generation."/>
                         </ToolTipService.ToolTip>
                     </ComboBox>
                     <Button x:Name="SettingsButtonNew" 
                             Click="SettingsButton_Click"
-                            Width="32" Height="32"
-                            CornerRadius="4"
+                            Width="36" Height="36"
+                            CornerRadius="6"
                             Background="#3A3A3A"
                             Foreground="White"
                             Padding="0">
@@ -193,7 +200,9 @@
                                 BorderThickness="1" 
                                 CornerRadius="4"
                                 Background="{ThemeResource LayerFillColorDefaultBrush}">
-                            <Canvas x:Name="FanCurveCanvas" HorizontalAlignment="Stretch" VerticalAlignment="Stretch"/>
+                            <Grid Background="Transparent">
+                                <Canvas x:Name="FanCurveCanvas" HorizontalAlignment="Stretch" VerticalAlignment="Stretch"/>
+                            </Grid>
                         </Border>
                     </Grid>
                 </Border>
