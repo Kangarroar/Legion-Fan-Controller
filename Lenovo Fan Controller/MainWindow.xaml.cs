@@ -31,6 +31,9 @@ namespace Lenovo_Fan_Controller
         private bool _isWindowVisible = true;
         private bool _isExiting = false;
         private bool _shouldStartMinimized = false;
+        private bool _isInternalResize = false;
+        private int _lastWidth = 1000;
+        private int _lastHeight = 800;
 
         // Fan curve data points 
         private List<CurvePoint> cpuCurvePoints;
@@ -177,30 +180,96 @@ namespace Lenovo_Fan_Controller
                 (displayArea.WorkArea.Height - height) / 2,
                 width,
                 height));
+
+            _lastWidth = width;
+            _lastHeight = height;
+
+            // Custom Title Bar
+            this.ExtendsContentIntoTitleBar = true;
+            this.SetTitleBar(AppTitleBar);
+
+            if (_appWindow.Presenter is OverlappedPresenter overlapped)
+            {
+                overlapped.IsMaximizable = true;
+                overlapped.IsMinimizable = true;
+                overlapped.IsResizable = true;
+            }
+
             _appWindow.Changed += AppWindow_Changed;
         }
 
         private void AppWindow_Changed(AppWindow sender, AppWindowChangedEventArgs args)
         {
-            if (args.DidSizeChange)
+            if (args.DidSizeChange && !_isInternalResize)
             {
+                if (_appWindow.Presenter is OverlappedPresenter overlapped &&
+                    overlapped.State == OverlappedPresenterState.Maximized)
+                {
+                    return;
+                }
+
                 var size = _appWindow.Size;
-                bool needsResize = false;
                 int newWidth = size.Width;
                 int newHeight = size.Height;
 
+                if (newWidth == _lastWidth && newHeight == _lastHeight) return;
+
+                bool needsResize = false;
+                const double targetRatio = 1.25; // 1000 / 800
+
+                // Maintain aspect ratio
+                if (newWidth != _lastWidth)
+                {
+                    newHeight = (int)(newWidth / targetRatio);
+                    needsResize = true;
+                }
+                else if (newHeight != _lastHeight)
+                {
+                    newWidth = (int)(newHeight * targetRatio);
+                    needsResize = true;
+                }
+
                 // Enforce Min Size
-                if (newWidth < 800) { newWidth = 800; needsResize = true; }
-                if (newHeight < 600) { newHeight = 600; needsResize = true; }
+                if (newWidth < 800)
+                {
+                    newWidth = 800;
+                    newHeight = (int)(newWidth / targetRatio);
+                    needsResize = true;
+                }
+                if (newHeight < 640)
+                {
+                    newHeight = 640;
+                    newWidth = (int)(newHeight * targetRatio);
+                    needsResize = true;
+                }
 
                 // Enforce Max Size
-                if (newWidth > 1000) { newWidth = 1000; needsResize = true; }
-                if (newHeight > 800) { newHeight = 800; needsResize = true; }
+                if (newWidth > 1000)
+                {
+                    newWidth = 1000;
+                    newHeight = (int)(newWidth / targetRatio);
+                    needsResize = true;
+                }
+                if (newHeight > 800)
+                {
+                    newHeight = 800;
+                    newWidth = (int)(newHeight * targetRatio);
+                    needsResize = true;
+                }
 
                 if (needsResize)
                 {
+                    _isInternalResize = true;
                     _appWindow.Resize(new Windows.Graphics.SizeInt32(newWidth, newHeight));
+                    _isInternalResize = false;
+
+                    _lastWidth = newWidth;
+                    _lastHeight = newHeight;
+                    return;
                 }
+
+                _lastWidth = newWidth;
+                _lastHeight = newHeight;
             }
 
             if (args.DidPresenterChange && _appWindow.Presenter.Kind == AppWindowPresenterKind.CompactOverlay)
