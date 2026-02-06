@@ -309,6 +309,13 @@ namespace Lenovo_Fan_Controller
                 Margin = new Thickness(0, 0, 0, 12)
             };
 
+            var enableSafeguardsCheckBox = new CheckBox
+            {
+                Content = "Enable Safety Safeguards",
+                IsChecked = SettingsManager.GetEnableSafeguards(),
+                Margin = new Thickness(0, 0, 0, 12)
+            };
+
             var hysteresisLabel = new TextBlock
             {
                 Text = "Temperature Hysteresis (Ramp Down Offset):",
@@ -333,6 +340,7 @@ namespace Lenovo_Fan_Controller
 
             stackPanel.Children.Add(startMinimizedCheckBox);
             stackPanel.Children.Add(lockPointsCheckBox);
+            stackPanel.Children.Add(enableSafeguardsCheckBox);
             stackPanel.Children.Add(hysteresisLabel);
             stackPanel.Children.Add(hysteresisBox);
             stackPanel.Children.Add(new MenuFlyoutSeparator { Margin = new Thickness(0, 12, 0, 12) });
@@ -359,6 +367,7 @@ namespace Lenovo_Fan_Controller
                 SettingsManager.SetStartMinimized(startMinimizedCheckBox.IsChecked == true);
                 SettingsManager.SetUnlockMaxRpm(unlockMaxRpmCheckBox.IsChecked == true);
                 SettingsManager.SetLockPoints(lockPointsCheckBox.IsChecked == true);
+                SettingsManager.SetEnableSafeguards(enableSafeguardsCheckBox.IsChecked == true);
 
                 currentConfig.Hysteresis = (int)hysteresisBox.Value;
 
@@ -1256,7 +1265,7 @@ hst_temps_ramp_down : {string.Join(" ", gpuRampDown)}";
                 newRpm = (int)Math.Clamp(newRpm, MIN_RPM, MAX_RPM);
 
                 // Safety constraint
-                if (newTemp > 80)
+                if (SettingsManager.GetEnableSafeguards() && newTemp > 80)
                 {
                     newRpm = Math.Max(newRpm, 2000);
                 }
@@ -1465,7 +1474,7 @@ hst_temps_ramp_down : {string.Join(" ", gpuRampDown)}";
                     int newRpm = (int)rpmBox.Value;
 
                     // Safety constraint: If temp > 80°C, RPM cannot be sub 2000
-                    if (currentEditingCurve == "cpu" && newTemp > 80)
+                    if (SettingsManager.GetEnableSafeguards() && currentEditingCurve == "cpu" && newTemp > 80)
                     {
                         newRpm = Math.Max(newRpm, 2000);
                     }
