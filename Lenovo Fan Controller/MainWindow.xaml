@@ -10,10 +10,8 @@
     Title="Legion Fan Controller">
 
     <Grid Background="#1E1E1E">
-        <!-- Main layout structure -->
         <Grid.RowDefinitions>
-            <RowDefinition Height="Auto"/>
-            <!-- Title bar -->
+            <RowDefinition Height="Auto"/> 
             <RowDefinition Height="*"/>
         </Grid.RowDefinitions>
 
@@ -27,15 +25,20 @@
 
         <!-- Main Content Area -->
         <Grid Grid.Row="1" Margin="12">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="*"/>
+            </Grid.RowDefinitions>
+
             <!-- Top Bar with Profile Buttons -->
-            <Grid Height="56" VerticalAlignment="Top">
+            <Grid Grid.Row="0" Height="56" VerticalAlignment="Top">
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="*"/>
                     <ColumnDefinition Width="Auto"/>
                     <ColumnDefinition Width="*"/>
                 </Grid.ColumnDefinitions>
 
-                <!-- Left Section (Empty for symmetry) -->
+                <!-- Left Section -->
                 <StackPanel Grid.Column="0" Orientation="Horizontal" HorizontalAlignment="Left" Margin="16,8,0,0" Spacing="8">
                     <Button x:Name="Restart" 
                             Width="32" Height="32"
@@ -55,15 +58,15 @@
                     <Button x:Name="DefaultBtn" Content="Default" Tag="default"
                             Style="{StaticResource AccentButtonStyle}" 
                             Padding="24,8" FontSize="13" CornerRadius="6" 
-                            MinWidth="100"/>
+                            Width="120"/>
                     <Button x:Name="PerformanceBtn" Content="Performance" Tag="performance"
                             Style="{StaticResource AccentButtonStyle}" 
                             Padding="24,8" FontSize="13" CornerRadius="6" 
-                            Opacity="0.6" MinWidth="100"/>
+                            Opacity="0.6" Width="120"/>
                     <Button x:Name="QuietBtn" Content="Quiet" Tag="quiet"
                             Style="{StaticResource AccentButtonStyle}" 
                             Padding="24,8" FontSize="13" CornerRadius="6" 
-                            Opacity="0.6" MinWidth="100"/>
+                            Opacity="0.6" Width="120"/>
                 </StackPanel>
 
                 <!-- Device Selector and Settings (Right) -->
@@ -90,212 +93,174 @@
                 </StackPanel>
             </Grid>
 
-            <!-- Main Content -->
-            <ScrollViewer Margin="0,64,0,0" VerticalScrollBarVisibility="Auto">
-                <Grid Padding="16,12" MaxWidth="1400" HorizontalAlignment="Stretch">
-                    <Grid.RowDefinitions>
-                        <RowDefinition Height="Auto"/>
-                        <RowDefinition Height="Auto"/>
-                        <RowDefinition Height="*"/>
-                        <RowDefinition Height="Auto"/>
-                    </Grid.RowDefinitions>
+            <!-- Hardware Monitor Cards & Graph Section -->
+            <Grid Grid.Row="1" Margin="0,12,0,0">
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="*"/>
+                    <RowDefinition Height="Auto"/>
+                </Grid.RowDefinitions>
 
-                    <!-- Hardware Monitor Cards -->
-                    <Grid Grid.Row="0" Margin="0,0,0,16">
-                        <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="*"/>
-                            <ColumnDefinition Width="*"/>
-                            <ColumnDefinition Width="*"/>
-                            <ColumnDefinition Width="*"/>
-                        </Grid.ColumnDefinitions>
+                <!-- Hardware Monitor Cards -->
+                <Grid Grid.Row="0" Margin="0,0,0,16" Padding="16,0">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="*"/>
+                    </Grid.ColumnDefinitions>
 
-                        <Border Grid.Column="0" Background="{ThemeResource CardBackgroundFillColorDefaultBrush}" 
-                                CornerRadius="8" Padding="16,12" Margin="4">
-                            <StackPanel Spacing="2">
-                                <TextBlock Text="CPU Temp" FontSize="11" Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
-                                <TextBlock x:Name="MonitorCpuTemp" Text="-- °C" FontSize="24" FontWeight="SemiBold"/>
-                            </StackPanel>
-                        </Border>
-
-                        <Border Grid.Column="1" Background="{ThemeResource CardBackgroundFillColorDefaultBrush}" 
-                                CornerRadius="8" Padding="16,12" Margin="4">
-                            <StackPanel Spacing="2">
-                                <TextBlock Text="GPU Temp" FontSize="11" Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
-                                <TextBlock x:Name="MonitorGpuTemp" Text="-- °C" FontSize="24" FontWeight="SemiBold"/>
-                            </StackPanel>
-                        </Border>
-
-                        <Border Grid.Column="2" Background="{ThemeResource CardBackgroundFillColorDefaultBrush}" 
-                                CornerRadius="8" Padding="16,12" Margin="4">
-                            <StackPanel Spacing="2">
-                                <TextBlock Text="CPU Fan" FontSize="11" Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
-                                <TextBlock x:Name="MonitorCpuFan" Text="-- RPM" FontSize="24" FontWeight="SemiBold"/>
-                            </StackPanel>
-                        </Border>
-
-                        <Border Grid.Column="3" Background="{ThemeResource CardBackgroundFillColorDefaultBrush}" 
-                                CornerRadius="8" Padding="16,12" Margin="4">
-                            <StackPanel Spacing="2">
-                                <TextBlock Text="GPU Fan" FontSize="11" Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
-                                <TextBlock x:Name="MonitorGpuFan" Text="-- RPM" FontSize="24" FontWeight="SemiBold"/>
-                            </StackPanel>
-                        </Border>
-                    </Grid>
-
-                    <!-- Fan Curve Graph Section -->
-                    <Border Grid.Row="2" Background="{ThemeResource CardBackgroundFillColorDefaultBrush}" 
-                            CornerRadius="8" Padding="20" MinHeight="400">
-                        <Grid>
-                            <Grid.RowDefinitions>
-                                <RowDefinition Height="Auto"/>
-                                <RowDefinition Height="Auto"/>
-                                <RowDefinition Height="*"/>
-                            </Grid.RowDefinitions>
-
-                            <!-- Graph Header with Curve Selector -->
-                            <Grid Grid.Row="0" Margin="0,0,0,12">
-                                <TextBlock Text="Fan Curve Editor" FontSize="16" FontWeight="SemiBold" VerticalAlignment="Center"/>
-                                
-                                <!-- CPU/GPU Selector -->
-                                <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Spacing="8">
-                                    <TextBlock Text="Editing:" FontSize="12" VerticalAlignment="Center" Opacity="0.8" Margin="0,0,8,0"/>
-                                    <StackPanel Orientation="Horizontal" Spacing="-1">
-                                        <ToggleButton x:Name="CpuCurveBtn" 
-                                                      Content="CPU Curve" 
-                                                      IsChecked="True"
-                                                      Click="CpuCurveBtn_Click"
-                                                      CornerRadius="4,0,0,4"
-                                                      MinWidth="100"
-                                                      Padding="12,6">
-                                            <ToggleButton.Resources>
-                                                <SolidColorBrush x:Key="ToggleButtonBackgroundChecked" Color="{ThemeResource SystemAccentColor}"/>
-                                                <SolidColorBrush x:Key="ToggleButtonBackgroundCheckedPointerOver" Color="{ThemeResource SystemAccentColorLight1}"/>
-                                                <SolidColorBrush x:Key="ToggleButtonBackgroundCheckedPressed" Color="{ThemeResource SystemAccentColorDark1}"/>
-                                            </ToggleButton.Resources>
-                                        </ToggleButton>
-                                        <ToggleButton x:Name="GpuCurveBtn" 
-                                                      Content="GPU Curve" 
-                                                      IsChecked="False"
-                                                      Click="GpuCurveBtn_Click"
-                                                      CornerRadius="0,4,4,0"
-                                                      MinWidth="100"
-                                                      Padding="12,6">
-                                            <ToggleButton.Resources>
-                                                <SolidColorBrush x:Key="ToggleButtonBackgroundChecked" Color="{ThemeResource SystemAccentColor}"/>
-                                                <SolidColorBrush x:Key="ToggleButtonBackgroundCheckedPointerOver" Color="{ThemeResource SystemAccentColorLight1}"/>
-                                                <SolidColorBrush x:Key="ToggleButtonBackgroundCheckedPressed" Color="{ThemeResource SystemAccentColorDark1}"/>
-                                            </ToggleButton.Resources>
-                                        </ToggleButton>
-                                    </StackPanel>
-                                </StackPanel>
-                            </Grid>
-
-                            <!-- Info Text -->
-                            <TextBlock Grid.Row="1" 
-                                       x:Name="CurveInfoText"
-                                       Text="Click and drag points to adjust the fan curve. GPU RPM values mirror CPU curve."
-                                       FontSize="11" 
-                                       Foreground="{ThemeResource TextFillColorSecondaryBrush}"
-                                       Margin="0,0,0,12"
-                                       TextWrapping="Wrap"/>
-                            
-                            <!-- Fan Curve Canvas -->
-                            <Border Grid.Row="2" 
-                                    BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}" 
-                                    BorderThickness="1" 
-                                    CornerRadius="4"
-                                    Background="{ThemeResource LayerFillColorDefaultBrush}">
-                                <Canvas x:Name="FanCurveCanvas" MinHeight="350"/>
-                            </Border>
-                        </Grid>
+                    <Border Grid.Column="0" Background="{ThemeResource CardBackgroundFillColorDefaultBrush}" 
+                            CornerRadius="8" Padding="16,12" Margin="4">
+                        <StackPanel Spacing="2">
+                            <TextBlock Text="CPU Temp" FontSize="11" Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
+                            <TextBlock x:Name="MonitorCpuTemp" Text="-- °C" FontSize="24" FontWeight="SemiBold"/>
+                        </StackPanel>
                     </Border>
 
-                    <!-- Bottom Action Bar -->
-                    <Grid Grid.Row="3" Margin="0,16,0,0">
-                        <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="*"/>
-                            <ColumnDefinition Width="Auto"/>
-                        </Grid.ColumnDefinitions>
+                    <Border Grid.Column="1" Background="{ThemeResource CardBackgroundFillColorDefaultBrush}" 
+                            CornerRadius="8" Padding="16,12" Margin="4">
+                        <StackPanel Spacing="2">
+                            <TextBlock Text="GPU Temp" FontSize="11" Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
+                            <TextBlock x:Name="MonitorGpuTemp" Text="-- °C" FontSize="24" FontWeight="SemiBold"/>
+                        </StackPanel>
+                    </Border>
 
-                        <!-- Advanced Settings Button -->
-                        <Button x:Name="AdvancedSettingsBtn" 
-                                Grid.Column="0"
-                                Content="Advanced Settings" 
-                                HorizontalAlignment="Left"
+                    <Border Grid.Column="2" Background="{ThemeResource CardBackgroundFillColorDefaultBrush}" 
+                            CornerRadius="8" Padding="16,12" Margin="4">
+                        <StackPanel Spacing="2">
+                            <TextBlock Text="CPU Fan" FontSize="11" Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
+                            <TextBlock x:Name="MonitorCpuFan" Text="-- RPM" FontSize="24" FontWeight="SemiBold"/>
+                        </StackPanel>
+                    </Border>
+
+                    <Border Grid.Column="3" Background="{ThemeResource CardBackgroundFillColorDefaultBrush}" 
+                            CornerRadius="8" Padding="16,12" Margin="4">
+                        <StackPanel Spacing="2">
+                            <TextBlock Text="GPU Fan" FontSize="11" Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
+                            <TextBlock x:Name="MonitorGpuFan" Text="-- RPM" FontSize="24" FontWeight="SemiBold"/>
+                        </StackPanel>
+                    </Border>
+                </Grid>
+
+                <!-- Fan Curve Graph Section -->
+                <Border Grid.Row="1" Background="{ThemeResource CardBackgroundFillColorDefaultBrush}" 
+                        CornerRadius="8" Padding="20" Margin="20,0,20,0">
+                    <Grid>
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="*"/>
+                        </Grid.RowDefinitions>
+
+                        <!-- Graph Header -->
+                        <Grid Grid.Row="0" Margin="0,0,0,12">
+                            <TextBlock Text="Fan Curve Editor" FontSize="16" FontWeight="SemiBold" VerticalAlignment="Center"/>
+                            
+                            <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Spacing="8">
+                                <TextBlock Text="Editing:" FontSize="12" VerticalAlignment="Center" Opacity="0.8" Margin="0,0,8,0"/>
+                                <StackPanel Orientation="Horizontal" Spacing="-1">
+                                    <ToggleButton x:Name="CpuCurveBtn" 
+                                                  Content="CPU Curve" 
+                                                  IsChecked="True"
+                                                  Click="CpuCurveBtn_Click"
+                                                  CornerRadius="4,0,0,4"
+                                                  MinWidth="100"
+                                                  Padding="12,6"/>
+                                    <ToggleButton x:Name="GpuCurveBtn" 
+                                                  Content="GPU Curve" 
+                                                  IsChecked="False"
+                                                  Click="GpuCurveBtn_Click"
+                                                  CornerRadius="0,4,4,0"
+                                                  MinWidth="100"
+                                                  Padding="12,6"/>
+                                </StackPanel>
+                            </StackPanel>
+                        </Grid>
+
+                        <!-- Info Text -->
+                        <TextBlock Grid.Row="1" 
+                                   x:Name="CurveInfoText"
+                                   Text="Click and drag points to adjust the fan curve. GPU RPM values mirror CPU curve."
+                                   FontSize="11" 
+                                   Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                                   Margin="0,0,0,12"
+                                   TextWrapping="Wrap"/>
+                        
+                        <!-- Fan Curve Canvas -->
+                        <Border Grid.Row="2" 
+                                BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}" 
+                                BorderThickness="1" 
                                 CornerRadius="4"
-                                Padding="20,10">
-                            <Button.Flyout>
-                                <Flyout Placement="Top" x:Name="AdvancedSettingsFlyout">
-                                    <StackPanel Spacing="16" Width="350">
-                                        <!-- Point Management -->
-                                        <StackPanel Spacing="8">
-                                            <TextBlock Text="Curve Points Management" FontWeight="SemiBold" FontSize="14"/>
-                                            <StackPanel Orientation="Horizontal" Spacing="12">
-                                                <Button x:Name="AddPointBtn" Content="Add Point" 
-                                                        Style="{StaticResource AccentButtonStyle}">
-                                                    <ToolTipService.ToolTip>
-                                                        <ToolTip Content="Add a new point to the fan curve (max 8 points)"/>
-                                                    </ToolTipService.ToolTip>
-                                                </Button>
-                                                <Button x:Name="RemovePointBtn" Content="Remove Point">
-                                                    <ToolTipService.ToolTip>
-                                                        <ToolTip Content="Remove the last point from the fan curve (min 2 points)"/>
-                                                    </ToolTipService.ToolTip>
-                                                </Button>
-                                                <TextBlock x:Name="PointCountText" Text="Current: 5 points" 
-                                                           VerticalAlignment="Center" 
-                                                           FontSize="12"
-                                                           Opacity="0.8"/>
-                                            </StackPanel>
-                                        </StackPanel>
+                                Background="{ThemeResource LayerFillColorDefaultBrush}">
+                            <Canvas x:Name="FanCurveCanvas" HorizontalAlignment="Stretch" VerticalAlignment="Stretch"/>
+                        </Border>
+                    </Grid>
+                </Border>
 
-                                        <Border Height="1" Background="{ThemeResource DividerStrokeColorDefaultBrush}"/>
+                <!-- Bottom Action Bar -->
+                <Grid Grid.Row="2" Margin="20,16,20,0">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="Auto"/>
+                    </Grid.ColumnDefinitions>
 
-                                        <!-- Fan Control Settings -->
-                                        <StackPanel Spacing="12">
-                                            <TextBlock Text="Fan Control Settings" FontWeight="SemiBold" FontSize="14"/>
-                                            <StackPanel Spacing="8">
-                                                <TextBlock Text="Acceleration Value" FontSize="12" Opacity="0.8"/>
-                                                <Slider x:Name="AccVal" Minimum="1" Maximum="5" Value="2" 
-                                                        StepFrequency="1" TickFrequency="1" TickPlacement="BottomRight"/>
-                                            </StackPanel>
-
-                                            <StackPanel Spacing="8">
-                                                <TextBlock Text="Deceleration Value" FontSize="12" Opacity="0.8"/>
-                                                <Slider x:Name="DecVal" Minimum="1" Maximum="5" Value="2"
-                                                        StepFrequency="1" TickFrequency="1" TickPlacement="BottomRight"/>
-                                            </StackPanel>
-
-                                            <ToggleButton x:Name="Turbo" Content="Turbo Mode"
-                                                  HorizontalAlignment="Stretch"
-                                                  IsEnabled="False"/>
+                    <Button x:Name="AdvancedSettingsBtn" 
+                            Grid.Column="0"
+                            Content="Advanced Settings" 
+                            HorizontalAlignment="Left"
+                            CornerRadius="4"
+                            Padding="20,10">
+                        <Button.Flyout>
+                            <Flyout Placement="Top" x:Name="AdvancedSettingsFlyout">
+                                <StackPanel Spacing="16" Width="350">
+                                    <StackPanel Spacing="8">
+                                        <TextBlock Text="Curve Points Management" FontWeight="SemiBold" FontSize="14"/>
+                                        <StackPanel Orientation="Horizontal" Spacing="12">
+                                            <Button x:Name="AddPointBtn" Content="Add Point" Style="{StaticResource AccentButtonStyle}"/>
+                                            <Button x:Name="RemovePointBtn" Content="Remove Point"/>
+                                            <TextBlock x:Name="PointCountText" Text="Current: 5 points" VerticalAlignment="Center" FontSize="12" Opacity="0.8"/>
                                         </StackPanel>
                                     </StackPanel>
-                                </Flyout>
-                            </Button.Flyout>
-                        </Button>
 
-                        <!-- Save Button -->
-                        <Button x:Name="Save"
-                                Grid.Column="1"
-                                Content="Save Profile"
-                                HorizontalAlignment="Right"
-                                Style="{StaticResource AccentButtonStyle}"
-                                CornerRadius="4"
-                                Padding="32,10"/>
-                    </Grid>
+                                    <Border Height="1" Background="{ThemeResource DividerStrokeColorDefaultBrush}"/>
 
-                    <!-- Progress Ring Overlay -->
-                    <muxc:ProgressRing x:Name="ProgressRing" 
-                                       Grid.Row="0" Grid.RowSpan="4"
-                                       Width="60" 
-                                       Height="60"
-                                       Visibility="Collapsed"
-                                       HorizontalAlignment="Center"
-                                       VerticalAlignment="Center"
-                                       IsActive="True"/>
+                                    <StackPanel Spacing="12">
+                                        <TextBlock Text="Fan Control Settings" FontWeight="SemiBold" FontSize="14"/>
+                                        <StackPanel Spacing="8">
+                                            <TextBlock Text="Acceleration Value" FontSize="12" Opacity="0.8"/>
+                                            <Slider x:Name="AccVal" Minimum="1" Maximum="5" Value="2" StepFrequency="1" TickFrequency="1" TickPlacement="BottomRight"/>
+                                        </StackPanel>
+                                        <StackPanel Spacing="8">
+                                            <TextBlock Text="Deceleration Value" FontSize="12" Opacity="0.8"/>
+                                            <Slider x:Name="DecVal" Minimum="1" Maximum="5" Value="2" StepFrequency="1" TickFrequency="1" TickPlacement="BottomRight"/>
+                                        </StackPanel>
+                                        <ToggleButton x:Name="Turbo" Content="Turbo Mode" HorizontalAlignment="Stretch" IsEnabled="False"/>
+                                    </StackPanel>
+                                </StackPanel>
+                            </Flyout>
+                        </Button.Flyout>
+                    </Button>
+
+                    <Button x:Name="Save"
+                            Grid.Column="1"
+                            Content="Save Profile"
+                            HorizontalAlignment="Right"
+                            Style="{StaticResource AccentButtonStyle}"
+                            CornerRadius="4"
+                            Padding="32,10"/>
                 </Grid>
-            </ScrollViewer>
+
+                <!-- Progress Ring Overlay -->
+                <muxc:ProgressRing x:Name="ProgressRing" 
+                                   Grid.Row="0" Grid.RowSpan="3"
+                                   Width="60" 
+                                   Height="60"
+                                   Visibility="Collapsed"
+                                   HorizontalAlignment="Center"
+                                   VerticalAlignment="Center"
+                                   IsActive="True"/>
+            </Grid>
         </Grid>
 
         <!-- System Tray Icon -->
@@ -308,19 +273,11 @@
             LeftClickCommand="{x:Bind ShowHideWindowCommand}">
             <tb:TaskbarIcon.ContextFlyout>
                 <MenuFlyout Opening="ContextMenu_Opening">
-                    <MenuFlyoutItem
-                        x:Name="ShowHideMenuItem"
-                        Text="Show Window"
-                        Click="ShowHideMenuItem_Click" />
+                    <MenuFlyoutItem x:Name="ShowHideMenuItem" Text="Show Window" Click="ShowHideMenuItem_Click" />
                     <MenuFlyoutSeparator />
-                    <ToggleMenuFlyoutItem
-                        x:Name="StartupMenuItem"
-                        Text="Run at Windows startup"
-                        Click="StartupMenuItem_Click" />
+                    <ToggleMenuFlyoutItem x:Name="StartupMenuItem" Text="Run at Windows startup" Click="StartupMenuItem_Click" />
                     <MenuFlyoutSeparator />
-                    <MenuFlyoutItem
-                        Text="Exit"
-                        Click="ExitMenuItem_Click" />
+                    <MenuFlyoutItem Text="Exit" Click="ExitMenuItem_Click" />
                 </MenuFlyout>
             </tb:TaskbarIcon.ContextFlyout>
         </tb:TaskbarIcon>
