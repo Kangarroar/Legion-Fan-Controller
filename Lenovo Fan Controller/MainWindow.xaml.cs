@@ -1255,6 +1255,12 @@ hst_temps_ramp_down : {string.Join(" ", gpuRampDown)}";
                 int newRpm = (int)(Math.Round(rawRpm / 50.0) * 50);
                 newRpm = (int)Math.Clamp(newRpm, MIN_RPM, MAX_RPM);
 
+                // Safety constraint
+                if (newTemp > 80)
+                {
+                    newRpm = Math.Max(newRpm, 2000);
+                }
+
                 // Constrain temperature: can't pass previous or next point
                 if (pointIndex > 0)
                 {
@@ -1457,6 +1463,12 @@ hst_temps_ramp_down : {string.Join(" ", gpuRampDown)}";
                 {
                     int newTemp = (int)tempBox.Value;
                     int newRpm = (int)rpmBox.Value;
+
+                    // Safety constraint: If temp > 80°C, RPM cannot be sub 2000
+                    if (currentEditingCurve == "cpu" && newTemp > 80)
+                    {
+                        newRpm = Math.Max(newRpm, 2000);
+                    }
 
                     // Apply constraints
                     if (pointIndex > 0)
