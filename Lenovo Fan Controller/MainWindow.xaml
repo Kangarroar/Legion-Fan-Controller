@@ -234,7 +234,7 @@
                                                 <Button x:Name="AddPointBtn" Content="Add Point" 
                                                         Style="{StaticResource AccentButtonStyle}">
                                                     <ToolTipService.ToolTip>
-                                                        <ToolTip Content="Add a new point to the fan curve (max 10 points)"/>
+                                                        <ToolTip Content="Add a new point to the fan curve (max 8 points)"/>
                                                     </ToolTipService.ToolTip>
                                                 </Button>
                                                 <Button x:Name="RemovePointBtn" Content="Remove Point">

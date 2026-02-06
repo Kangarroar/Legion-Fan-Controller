@@ -39,9 +39,9 @@ namespace Lenovo_Fan_Controller
 
         // Graph constants
         private const double GRAPH_MARGIN = 40;
-        private const int MIN_TEMP = 20;
+        private const int MIN_TEMP = 0;
         private const int MAX_TEMP = 100;
-        private const int MIN_RPM = 1000;
+        private const int MIN_RPM = 0;
         private int MAX_RPM = 4400;
 
         // Dragging state
