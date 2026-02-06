@@ -1094,24 +1094,47 @@ hst_temps_ramp_down : {string.Join(" ", gpuRampDown)}";
                 positions.Add(new Windows.Foundation.Point(x, y));
             }
 
+            // Extended positions to edges
+            var drawingPositions = new List<Windows.Foundation.Point>();
+            bool hasStartExtension = false;
+            if (points[0].Temp > MIN_TEMP)
+            {
+                drawingPositions.Add(new Windows.Foundation.Point(GRAPH_MARGIN, positions[0].Y));
+                hasStartExtension = true;
+            }
+            drawingPositions.AddRange(positions);
+            bool hasEndExtension = false;
+            if (points[points.Count - 1].Temp < MAX_TEMP)
+            {
+                drawingPositions.Add(new Windows.Foundation.Point(GRAPH_MARGIN + graphWidth, positions[positions.Count - 1].Y));
+                hasEndExtension = true;
+            }
+
             // Create gradient fill below the curve
             var fillPath = new Microsoft.UI.Xaml.Shapes.Path();
             var fillGeometry = new PathGeometry();
             var fillFigure = new PathFigure();
 
             // Start from bottom-left
-            fillFigure.StartPoint = new Windows.Foundation.Point(positions[0].X, GRAPH_MARGIN + graphHeight);
+            fillFigure.StartPoint = new Windows.Foundation.Point(drawingPositions[0].X, GRAPH_MARGIN + graphHeight);
 
             // Line up to first point
-            fillFigure.Segments.Add(new LineSegment { Point = positions[0] });
+            fillFigure.Segments.Add(new LineSegment { Point = drawingPositions[0] });
 
-            // Create smooth curve through all points using bezier curves
-            for (int i = 0; i < positions.Count - 1; i++)
+            // Create smooth curve through all points
+            for (int i = 0; i < drawingPositions.Count - 1; i++)
             {
-                var p0 = positions[Math.Max(0, i - 1)];
-                var p1 = positions[i];
-                var p2 = positions[i + 1];
-                var p3 = positions[Math.Min(positions.Count - 1, i + 2)];
+                // Straigh on edges
+                if ((i == 0 && hasStartExtension) || (i == drawingPositions.Count - 2 && hasEndExtension))
+                {
+                    fillFigure.Segments.Add(new LineSegment { Point = drawingPositions[i + 1] });
+                    continue;
+                }
+
+                var p0 = drawingPositions[Math.Max(0, i - 1)];
+                var p1 = drawingPositions[i];
+                var p2 = drawingPositions[i + 1];
+                var p3 = drawingPositions[Math.Min(drawingPositions.Count - 1, i + 2)];
 
                 // Calculate control points for smooth bezier curve
                 double tension = 0.1; // Smoothness factor (0 = sharp corners, 1 = very smooth)
@@ -1137,7 +1160,7 @@ hst_temps_ramp_down : {string.Join(" ", gpuRampDown)}";
             // Line down to bottom-right
             fillFigure.Segments.Add(new LineSegment
             {
-                Point = new Windows.Foundation.Point(positions[positions.Count - 1].X, GRAPH_MARGIN + graphHeight)
+                Point = new Windows.Foundation.Point(drawingPositions[drawingPositions.Count - 1].X, GRAPH_MARGIN + graphHeight)
             });
 
             fillGeometry.Figures.Add(fillFigure);
@@ -1172,15 +1195,22 @@ hst_temps_ramp_down : {string.Join(" ", gpuRampDown)}";
             // Draw smooth curve line on top
             var curvePath = new Microsoft.UI.Xaml.Shapes.Path();
             var curveGeometry = new PathGeometry();
-            var curveFigure = new PathFigure { StartPoint = positions[0] };
+            var curveFigure = new PathFigure { StartPoint = drawingPositions[0] };
 
             // Create smooth curve through all points
-            for (int i = 0; i < positions.Count - 1; i++)
+            for (int i = 0; i < drawingPositions.Count - 1; i++)
             {
-                var p0 = positions[Math.Max(0, i - 1)];
-                var p1 = positions[i];
-                var p2 = positions[i + 1];
-                var p3 = positions[Math.Min(positions.Count - 1, i + 2)];
+                // Use a straight line for edge extensions
+                if ((i == 0 && hasStartExtension) || (i == drawingPositions.Count - 2 && hasEndExtension))
+                {
+                    curveFigure.Segments.Add(new LineSegment { Point = drawingPositions[i + 1] });
+                    continue;
+                }
+
+                var p0 = drawingPositions[Math.Max(0, i - 1)];
+                var p1 = drawingPositions[i];
+                var p2 = drawingPositions[i + 1];
+                var p3 = drawingPositions[Math.Min(drawingPositions.Count - 1, i + 2)];
 
                 double tension = 0.1;
 
