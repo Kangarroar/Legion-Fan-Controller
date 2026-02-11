@@ -60,6 +60,7 @@
                         CornerRadius="8"
                         Padding="4"
                         Margin="0,8,0,0"
+                        
                         HorizontalAlignment="Center"
                         VerticalAlignment="Center">
                     <StackPanel Orientation="Horizontal" Spacing="16">

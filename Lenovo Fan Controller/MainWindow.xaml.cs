@@ -529,6 +529,8 @@ namespace Lenovo_Fan_Controller
             FanCurveCanvas.PointerPressed += FanCurveCanvas_PointerPressed;
             FanCurveCanvas.PointerMoved += FanCurveCanvas_PointerMoved;
             FanCurveCanvas.PointerReleased += FanCurveCanvas_PointerReleased;
+            FanCurveCanvas.PointerCanceled += (s, e) => ResetDragState();
+            FanCurveCanvas.PointerCaptureLost += (s, e) => ResetDragState();
         }
 
         private async Task InitializeWhenReadyAsync()
@@ -846,12 +848,11 @@ hst_temps_ramp_down : 28 48 53 63 68";
                 File.WriteAllText(configPath, configContent);
 
                 string fileName = System.IO.Path.GetFileName(configPath);
-                ShowSuccessDialog("Configuration Saved",
-                    $"Saved to: {fileName}\n\nPath: {configPath}\n\nContent:\n{configContent}");
+                ShowSuccessDialog("Success", "Configuration saved");
             }
             catch (Exception ex)
             {
-                ShowErrorDialog("Error Saving Config", $"Failed to save configuration: {ex.Message}");
+                ShowErrorDialog("Error Saving Config", $"Failed to save configuration: {ex.Message} ");
             }
         }
 
@@ -1508,18 +1509,27 @@ hst_temps_ramp_down : {string.Join(" ", gpuRampDown)}";
         {
             if (draggedPoint != null)
             {
-                // Check if it was a click (not a drag)
-                if (!isDragging)
+                var pointToEdit = draggedPoint;
+                bool wasActuallyDragging = isDragging;
+
+                // Sticking fix
+                ResetDragState();
+
+                if (!wasActuallyDragging)
                 {
                     // Show flyout to edit point
-                    await ShowPointEditorFlyout(draggedPoint);
+                    await ShowPointEditorFlyout(pointToEdit);
                 }
 
-                draggedPoint = null;
-                isDragging = false;
-                FanCurveCanvas.ReleasePointerCaptures();
                 DrawFanCurve();
             }
+        }
+
+        private void ResetDragState()
+        {
+            draggedPoint = null;
+            isDragging = false;
+            FanCurveCanvas.ReleasePointerCaptures();
         }
 
         private async Task ShowPointEditorFlyout(CurvePoint point)
