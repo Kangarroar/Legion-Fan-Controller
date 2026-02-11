@@ -1190,12 +1190,19 @@ hst_temps_ramp_down : {string.Join(" ", gpuRampDown)}";
                     p2.Y - (p3.Y - p1.Y) * tension
                 );
 
-                fillFigure.Segments.Add(new BezierSegment
+                if (p1.Y == p2.Y)
                 {
-                    Point1 = cp1,
-                    Point2 = cp2,
-                    Point3 = p2
-                });
+                    fillFigure.Segments.Add(new LineSegment { Point = p2 });
+                }
+                else
+                {
+                    fillFigure.Segments.Add(new BezierSegment
+                    {
+                        Point1 = cp1,
+                        Point2 = cp2,
+                        Point3 = p2
+                    });
+                }
             }
 
             // Line down to bottom-right
@@ -1265,12 +1272,19 @@ hst_temps_ramp_down : {string.Join(" ", gpuRampDown)}";
                     p2.Y - (p3.Y - p1.Y) * tension
                 );
 
-                curveFigure.Segments.Add(new BezierSegment
+                if (p1.Y == p2.Y)
                 {
-                    Point1 = cp1,
-                    Point2 = cp2,
-                    Point3 = p2
-                });
+                    curveFigure.Segments.Add(new LineSegment { Point = p2 });
+                }
+                else
+                {
+                    curveFigure.Segments.Add(new BezierSegment
+                    {
+                        Point1 = cp1,
+                        Point2 = cp2,
+                        Point3 = p2
+                    });
+                }
             }
 
             curveGeometry.Figures.Add(curveFigure);
