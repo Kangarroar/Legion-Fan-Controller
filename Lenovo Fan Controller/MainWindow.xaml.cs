@@ -45,7 +45,7 @@ namespace Lenovo_Fan_Controller
         private const int MIN_TEMP = 0;
         private const int MAX_TEMP = 100;
         private const int MIN_RPM = 0;
-        private int MAX_RPM = 4400;
+        private int MAX_RPM = 4500;
 
         // Dragging state
         private CurvePoint draggedPoint;
@@ -58,6 +58,7 @@ namespace Lenovo_Fan_Controller
 
         public MainWindow()
         {
+            MAX_RPM = SettingsManager.GetMaxRpm();
             ShowHideWindowCommand = new RelayCommand(ShowHideWindow);
 
             this.InitializeComponent();
@@ -198,6 +199,7 @@ namespace Lenovo_Fan_Controller
             _appWindow.Changed += AppWindow_Changed;
         }
 
+
         private void AppWindow_Changed(AppWindow sender, AppWindowChangedEventArgs args)
         {
             if (args.DidSizeChange && !_isInternalResize)
@@ -218,7 +220,17 @@ namespace Lenovo_Fan_Controller
                 const double targetRatio = 1.25; // 1000 / 800
 
                 // Maintain aspect ratio
-                if (newWidth != _lastWidth)
+                if (!SettingsManager.GetAllowResizing())
+                {
+                    // If resizing is locked, force back to default 1000x800
+                    if (newWidth != 1000 || newHeight != 800)
+                    {
+                        newWidth = 1000;
+                        newHeight = 800;
+                        needsResize = true;
+                    }
+                }
+                else if (newWidth != _lastWidth)
                 {
                     newHeight = (int)(newWidth / targetRatio);
                     needsResize = true;
@@ -356,20 +368,12 @@ namespace Lenovo_Fan_Controller
 
             var unlockMaxRpmCheckBox = new CheckBox
             {
-                Content = "Unlock Max RPM (5000 RPM - DANGEROUS!)",
+                Content = "Unlock Max RPM ⚠️",
                 IsChecked = SettingsManager.GetUnlockMaxRpm(),
                 Margin = new Thickness(0, 0, 0, 4),
                 Foreground = new SolidColorBrush(Microsoft.UI.Colors.OrangeRed)
             };
 
-            var warningText = new TextBlock
-            {
-                Text = "⚠️ Warning: Setting RPM values too high can damage your fans!",
-                TextWrapping = TextWrapping.Wrap,
-                FontSize = 12,
-                Opacity = 0.7,
-                Margin = new Thickness(0, 0, 0, 4)
-            };
 
             var lockPointsCheckBox = new CheckBox
             {
@@ -380,8 +384,15 @@ namespace Lenovo_Fan_Controller
 
             var enableSafeguardsCheckBox = new CheckBox
             {
-                Content = "Enable Safety Safeguards",
+                Content = "Enable Safeguards",
                 IsChecked = SettingsManager.GetEnableSafeguards(),
+                Margin = new Thickness(0, 0, 0, 12)
+            };
+
+            var allowResizingCheckBox = new CheckBox
+            {
+                Content = "Allow Window Resizing",
+                IsChecked = SettingsManager.GetAllowResizing(),
                 Margin = new Thickness(0, 0, 0, 12)
             };
 
@@ -410,11 +421,11 @@ namespace Lenovo_Fan_Controller
             stackPanel.Children.Add(startMinimizedCheckBox);
             stackPanel.Children.Add(lockPointsCheckBox);
             stackPanel.Children.Add(enableSafeguardsCheckBox);
+            stackPanel.Children.Add(allowResizingCheckBox);
             stackPanel.Children.Add(hysteresisLabel);
             stackPanel.Children.Add(hysteresisBox);
             stackPanel.Children.Add(new MenuFlyoutSeparator { Margin = new Thickness(0, 12, 0, 12) });
             stackPanel.Children.Add(unlockMaxRpmCheckBox);
-            stackPanel.Children.Add(warningText);
 
             var dialog = new ContentDialog
             {
@@ -437,12 +448,35 @@ namespace Lenovo_Fan_Controller
                 SettingsManager.SetUnlockMaxRpm(unlockMaxRpmCheckBox.IsChecked == true);
                 SettingsManager.SetLockPoints(lockPointsCheckBox.IsChecked == true);
                 SettingsManager.SetEnableSafeguards(enableSafeguardsCheckBox.IsChecked == true);
+                SettingsManager.SetAllowResizing(allowResizingCheckBox.IsChecked == true);
+
+                if (allowResizingCheckBox.IsChecked != true)
+                {
+                    if (_appWindow.Presenter is OverlappedPresenter overlapped && overlapped.State != OverlappedPresenterState.Maximized)
+                    {
+                        _isInternalResize = true;
+                        _appWindow.Resize(new Windows.Graphics.SizeInt32(1000, 800));
+                        _isInternalResize = false;
+                        _lastWidth = 1000;
+                        _lastHeight = 800;
+                    }
+                }
 
                 currentConfig.Hysteresis = (int)hysteresisBox.Value;
 
                 if (maxRpmChanged)
                 {
                     MAX_RPM = SettingsManager.GetMaxRpm();
+
+                    // Clamp existing points MAX_RPM
+                    foreach (var p in cpuCurvePoints)
+                    {
+                        if (p.Rpm > MAX_RPM) p.Rpm = MAX_RPM;
+                    }
+                    foreach (var p in gpuCurvePoints)
+                    {
+                        if (p.Rpm > MAX_RPM) p.Rpm = MAX_RPM;
+                    }
                 }
 
                 // Update button states
@@ -556,14 +590,14 @@ namespace Lenovo_Fan_Controller
                     _ => App.BalancedConfigPath
                 };
 
+                // Apply max RPM setting BEFORE loading config
+                MAX_RPM = SettingsManager.GetMaxRpm();
+
                 LoadConfig(configPath);
                 RestartFanControl();
 
                 // Update UI to reflect current profile
                 SetActiveProfileButton(currentProfile);
-
-                // Apply max RPM setting
-                MAX_RPM = SettingsManager.GetMaxRpm();
             }
             catch (Exception ex)
             {
@@ -717,16 +751,18 @@ namespace Lenovo_Fan_Controller
 
             for (int i = 0; i < pointCount; i++)
             {
+                int rpm = Math.Min(currentConfig.FanRpmPoints[i], MAX_RPM);
+
                 cpuCurvePoints.Add(new CurvePoint
                 {
                     Temp = currentConfig.CpuTempsRampUp[i],
-                    Rpm = currentConfig.FanRpmPoints[i]
+                    Rpm = rpm
                 });
 
                 gpuCurvePoints.Add(new CurvePoint
                 {
                     Temp = currentConfig.GpuTempsRampUp[i],
-                    Rpm = currentConfig.FanRpmPoints[i]
+                    Rpm = rpm
                 });
             }
 
@@ -846,9 +882,7 @@ hst_temps_ramp_down : 28 48 53 63 68";
 
                 string configContent = GenerateConfigContent();
                 File.WriteAllText(configPath, configContent);
-
-                string fileName = System.IO.Path.GetFileName(configPath);
-                ShowSuccessDialog("Success", "Configuration saved");
+                ShowSuccessDialog("Configuration saved", "");
             }
             catch (Exception ex)
             {
@@ -1714,7 +1748,6 @@ hst_temps_ramp_down : {string.Join(" ", gpuRampDown)}";
                     WindowStyle = ProcessWindowStyle.Hidden
                 });
 
-                ShowSuccessDialog("Success", "Fan control service restarted!");
             }
             catch (Exception ex)
             {

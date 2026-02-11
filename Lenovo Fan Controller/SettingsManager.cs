@@ -11,6 +11,7 @@ namespace Lenovo_Fan_Controller
         private const string UnlockMaxRpmKey = "UnlockMaxRpm";
         private const string LockPointsKey = "LockPoints";
         private const string EnableSafeguardsKey = "EnableSafeguards";
+        private const string AllowResizingKey = "AllowResizing";
 
         // Default values
         public const bool DefaultShowGpuTemp = true;
@@ -18,8 +19,9 @@ namespace Lenovo_Fan_Controller
         public const bool DefaultUnlockMaxRpm = false;
         public const bool DefaultLockPoints = true;
         public const bool DefaultEnableSafeguards = true;
+        public const bool DefaultAllowResizing = false;
 
-        public const int NormalMaxRpm = 4400;
+        public const int NormalMaxRpm = 4500;
         public const int UnlockedMaxRpm = 5000;
 
         /// <summary>
@@ -88,6 +90,16 @@ namespace Lenovo_Fan_Controller
         public static void SetEnableSafeguards(bool value)
         {
             SetBoolSetting(EnableSafeguardsKey, value);
+        }
+
+        public static bool GetAllowResizing()
+        {
+            return GetBoolSetting(AllowResizingKey, DefaultAllowResizing);
+        }
+
+        public static void SetAllowResizing(bool value)
+        {
+            SetBoolSetting(AllowResizingKey, value);
         }
 
         /// <summary>
