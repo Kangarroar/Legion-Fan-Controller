@@ -1,33 +1,59 @@
 # Lenovo Legion 5/6 Fan Controller
-![Stable Release](https://img.shields.io/github/v/release/Kangarroar/Legion-5-6-Fan-Controller?style=flat-square&label=Stable)
-![Pre-release](https://img.shields.io/github/v/release/Kangarroar/Legion-5-6-Fan-Controller?include_prereleases&style=flat-square&label=Pre-release)
+
+![Stable Release](https://img.shields.io/github/v/release/Kangarroar/Legion-5-6-Fan-Controller?style=flat-square\&label=Stable)
+![Pre-release](https://img.shields.io/github/v/release/Kangarroar/Legion-5-6-Fan-Controller?include_prereleases\&style=flat-square\&label=Pre-release)
 ![License](https://img.shields.io/github/license/Kangarroar/Legion-5-6-Fan-Controller?style=flat-square)
 ![Issues](https://img.shields.io/github/issues/Kangarroar/Legion-5-6-Fan-Controller?style=flat-square)
 ![Downloads](https://img.shields.io/github/downloads/Kangarroar/Legion-5-6-Fan-Controller/total?style=flat-square)
 
-A Windows utility for custom fan control on Lenovo Legion 5/6 series laptops. Based and forked from [LegionGen5-6FanControl_WinRing_Smokeless_I-OPortsMethod](https://github.com/Z4ndyz/LegionGen5-6FanControl_WinRing_Smokeless_I-OPortsMethod).
-<img width="836" height="773" alt="image" src="https://github.com/user-attachments/assets/dfd9f7c3-82c7-4913-93cf-1f0283aff9ad" />
+A Windows utility for custom fan control on **Lenovo Legion (Gen 5/6)** laptops.
+Based on and forked from [LegionGen5-6FanControl_WinRing_Smokeless_I-OPortsMethod](https://github.com/Z4ndyz/LegionGen5-6FanControl_WinRing_Smokeless_I-OPortsMethod).
+
+<img width="986" height="793" alt="image" src="https://github.com/user-attachments/assets/ea1b5436-1a6c-46d9-ad5c-b43c1c08d1b3" />
+
+---
+
+## Requirements
+
+* Windows 10/11 (64-bit)
+* Lenovo Legion 5/6 series laptop
+* Administrator privileges
+* .NET 6.0 Desktop Runtime
+
+---
 
 ## Installation
 
-1. Download the latest release from [Releases page](https://github.com/Kangarroar/Legion-5-6-Fan-Controller/releases)
+1. Download the latest release from the [Releases page](https://github.com/Kangarroar/Legion-5-6-Fan-Controller/releases)
 2. Extract the ZIP file
 3. Right-click `LenovoFanController.exe` → **Run as administrator**
 
-Use at your own risk.
+> Use at your own risk.
 
-##  Requirements
+---
 
-- Windows 10/11 (64-bit)
-- Lenovo Legion 5/6 series laptop
-- Administrator privileges
-- .NET 6.0 Desktop Runtime
+## Windows Defender (WinRing0)
 
-___
+This application uses **WinRing0** for low-level hardware access.
+Windows Defender may flag `WinRing0x64.sys` as:
 
+> Trojan/VulnerableDriver:WinNT/WinRing0
 
-# Original README.md
-# LegionGen5-6FanControl_WinRing_Smokeless_I-OPortsMethod
+This is expected behavior due to the nature of the driver.
+
+Microsoft explanation:
+[https://support.microsoft.com/en-us/windows/microsoft-defender-antivirus-alert-vulnerabledriver-winnt-winring0-eb057830-d77b-41a2-9a34-015a5d203c42](https://support.microsoft.com/en-us/windows/microsoft-defender-antivirus-alert-vulnerabledriver-winnt-winring0-eb057830-d77b-41a2-9a34-015a5d203c42)
+
+If blocked:
+
+* Manually allow it in Windows Security
+  **or**
+* Run `AddDefenderExclusion.bat` as Administrator to automatically add the exclusion
+
+---
+
+Original README.md
+LegionGen5-6FanControl_WinRing_Smokeless_I-OPortsMethod
 ```
 Method of controlling Fans on Lenovo Legions Gen 5/6
 
