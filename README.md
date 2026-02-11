@@ -28,6 +28,7 @@ Based on and forked from [LegionGen5-6FanControl_WinRing_Smokeless_I-OPortsMetho
 2. Extract the ZIP file
 3. Right-click `LenovoFanController.exe` → **Run as administrator**
 
+You may check the [Wiki](https://github.com/Kangarroar/Legion-Fan-Controller/wiki) for more info.
 > Use at your own risk.
 
 ---
