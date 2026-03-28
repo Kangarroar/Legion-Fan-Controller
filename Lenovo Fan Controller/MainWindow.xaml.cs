@@ -1,3 +1,5 @@
+using H.NotifyIcon;
+using LegionFanController.Hardware;
 using Microsoft.UI;
 using Microsoft.UI.Windowing;
 using Microsoft.UI.Xaml;
@@ -10,11 +12,11 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
+using System.Runtime.InteropServices;
 using System.Threading.Tasks;
 using System.Windows.Input;
 using WinRT.Interop;
-using H.NotifyIcon;
-using LegionFanController.Hardware;
+using Path = System.IO.Path;
 
 namespace Lenovo_Fan_Controller
 {
@@ -22,7 +24,7 @@ namespace Lenovo_Fan_Controller
     {
         // Configuration
         private FanConfig currentConfig;
-        private string currentProfile = "default";
+        private string currentProfile = "balance";
 
         // Window state
         private XamlRoot _xamlRoot;
@@ -34,6 +36,27 @@ namespace Lenovo_Fan_Controller
         private bool _isInternalResize = false;
         private int _lastWidth = 1000;
         private int _lastHeight = 800;
+        private bool _isReinitializing = false;
+        private DispatcherTimer _monitoringTimer;
+
+        private IntPtr _hwnd;
+        private IntPtr _oldWndProc;
+        private WndProcDelegate _wndProcDelegate;
+
+        private delegate IntPtr WndProcDelegate(IntPtr hWnd, uint msg, IntPtr wParam, IntPtr lParam);
+
+        [DllImport("user32.dll")]
+        private static extern IntPtr GetWindowLongPtr(IntPtr hWnd, int nIndex);
+        [DllImport("user32.dll")]
+        private static extern IntPtr SetWindowLongPtr(IntPtr hWnd, int nIndex, IntPtr dwNewLong);
+        [DllImport("user32.dll")]
+        private static extern IntPtr CallWindowProc(IntPtr lpPrevWndFunc, IntPtr hWnd, uint msg, IntPtr wParam, IntPtr lParam);
+
+        private const int GWLP_WNDPROC = -4;
+        private const uint WM_SYSCOMMAND = 0x0112;
+        private const int SC_MINIMIZE = 0xF020;
+        private const uint WM_SIZE = 0x0005;
+        private const int SIZE_MINIMIZED = 1;
 
         // Fan curve data points 
         private List<CurvePoint> cpuCurvePoints;
@@ -64,6 +87,7 @@ namespace Lenovo_Fan_Controller
             this.InitializeComponent();
             this.Activated += MainWindow_Activated;
             this.Closed += MainWindow_Closed;
+
             SetWindowProperties();
             SetupEventHandlers();
             CheckStartupStatus();
@@ -143,10 +167,17 @@ namespace Lenovo_Fan_Controller
 
         private void MainWindow_Closed(object sender, WindowEventArgs args)
         {
+            _monitoringTimer?.Stop();
+            if (_oldWndProc != IntPtr.Zero)
+            {
+                SetWindowLongPtr(_hwnd, GWLP_WNDPROC, _oldWndProc);
+            }
+
             if (_isExiting)
             {
                 try
                 {
+                    ECUtils.Cleanup();
                     foreach (var process in Process.GetProcessesByName("FanControl"))
                     {
                         try
@@ -185,7 +216,6 @@ namespace Lenovo_Fan_Controller
             _lastWidth = width;
             _lastHeight = height;
 
-            // Custom Title Bar
             this.ExtendsContentIntoTitleBar = true;
             this.SetTitleBar(AppTitleBar);
 
@@ -196,9 +226,24 @@ namespace Lenovo_Fan_Controller
                 overlapped.IsResizable = true;
             }
 
+            _hwnd = hWnd;
+            _wndProcDelegate = WndProc;
+            _oldWndProc = SetWindowLongPtr(_hwnd, GWLP_WNDPROC, Marshal.GetFunctionPointerForDelegate(_wndProcDelegate));
+
             _appWindow.Changed += AppWindow_Changed;
         }
 
+        private IntPtr WndProc(IntPtr hWnd, uint msg, IntPtr wParam, IntPtr lParam)
+        {
+            if (msg == WM_SYSCOMMAND && (int)wParam == SC_MINIMIZE)
+            {
+                Debug.WriteLine("[WndProc] SC_MINIMIZE - calling HideWindow()");
+                HideWindow();
+                return IntPtr.Zero;
+            }
+
+            return CallWindowProc(_oldWndProc, hWnd, msg, wParam, lParam);
+        }
 
         private void AppWindow_Changed(AppWindow sender, AppWindowChangedEventArgs args)
         {
@@ -526,6 +571,7 @@ namespace Lenovo_Fan_Controller
         private void HideWindow()
         {
             _isWindowVisible = false;
+            _monitoringTimer?.Stop();
             ShowHideMenuItem.Text = "Show Window";
 
             var hWnd = WindowNative.GetWindowHandle(this);
@@ -538,8 +584,17 @@ namespace Lenovo_Fan_Controller
             ShowHideMenuItem.Text = "Hide Window";
 
             var hWnd = WindowNative.GetWindowHandle(this);
+            IntPtr currentWndProc = GetWindowLongPtr(hWnd, GWLP_WNDPROC);
+
+            if (currentWndProc != Marshal.GetFunctionPointerForDelegate(_wndProcDelegate))
+            {
+                Debug.WriteLine("WndProc lost, resetting...");
+                _oldWndProc = SetWindowLongPtr(hWnd, GWLP_WNDPROC, Marshal.GetFunctionPointerForDelegate(_wndProcDelegate));
+            }
             User32.ShowWindow(hWnd, User32.SW_SHOW);
+            User32.SetForegroundWindow(hWnd);
             this.Activate();
+            _monitoringTimer?.Start();
         }
 
         private void SetupEventHandlers()
@@ -567,6 +622,100 @@ namespace Lenovo_Fan_Controller
             FanCurveCanvas.PointerCaptureLost += (s, e) => ResetDragState();
         }
 
+        private async Task ShowPawnIOInstallDialog()
+        {
+            while (this.Content?.XamlRoot == null)
+            {
+                await Task.Delay(1000);
+            }
+            var stackPanel = new StackPanel { Spacing = 8 };
+
+            stackPanel.Children.Add(new TextBlock
+            {
+                Text = "PawnIO driver is not installed or failed to initialize.\n\n" +
+                       "Please follow these steps:",
+                TextWrapping = TextWrapping.Wrap
+            });
+
+            var installPanel = new StackPanel { Spacing = 4, Margin = new Thickness(0, 8, 0, 0) };
+
+            installPanel.Children.Add(new HyperlinkButton
+            {
+                Content = "Download PawnIO.Setup from pawnio.eu",
+                NavigateUri = new Uri("https://pawnio.eu")
+            });
+
+            installPanel.Children.Add(new HyperlinkButton
+            {
+                Content = "Download from Github (alternative)",
+                NavigateUri = new Uri("https://github.com/namazso/PawnIO.Setup/releases")
+            });
+
+            stackPanel.Children.Add(new TextBlock
+            {
+                Text = "1. Install PawnIO driver:",
+                FontWeight = Microsoft.UI.Text.FontWeights.SemiBold
+            });
+            stackPanel.Children.Add(installPanel);
+
+            stackPanel.Children.Add(new TextBlock
+            {
+                Text = "2. Download modules:",
+                FontWeight = Microsoft.UI.Text.FontWeights.SemiBold,
+                Margin = new Thickness(0, 12, 0, 0)
+            });
+            stackPanel.Children.Add(new HyperlinkButton
+            {
+                Content = "Download PawnIO.Modules from Github",
+                NavigateUri = new Uri("https://github.com/namazso/PawnIO.Modules/releases"),
+                Margin = new Thickness(0, 4, 0, 0)
+            });
+
+            stackPanel.Children.Add(new TextBlock
+            {
+                Text = "3. Extract LpcIO.bin to:",
+                FontWeight = Microsoft.UI.Text.FontWeights.SemiBold,
+                Margin = new Thickness(0, 12, 0, 4)
+            });
+            stackPanel.Children.Add(new TextBlock
+            {
+                Text = "C:\\Program Files\\PawnIO\\LpcIO.bin",
+                FontFamily = new FontFamily("Consolas"),
+                Foreground = new SolidColorBrush(Microsoft.UI.Colors.Gray)
+            });
+
+            stackPanel.Children.Add(new TextBlock
+            {
+                Text = "⚠️ Run as Administrator",
+                Foreground = new SolidColorBrush(Microsoft.UI.Colors.Orange),
+                Margin = new Thickness(0, 16, 0, 0)
+            });
+
+            var dialog = new ContentDialog
+            {
+                Title = "PawnIO Driver Required",
+                Content = stackPanel,
+                PrimaryButtonText = "Retry",
+                CloseButtonText = "Exit",
+                DefaultButton = ContentDialogButton.Primary,
+                XamlRoot = this.Content?.XamlRoot
+            };
+
+            var result = await dialog.ShowAsync();
+
+            if (result == ContentDialogResult.Primary)
+            {
+                _isReinitializing = true;
+                await InitializeWhenReadyAsync();
+                _isReinitializing = false;
+            }
+            else
+            {
+                _isExiting = true;
+                this.Close();
+            }
+        }
+
         private async Task InitializeWhenReadyAsync()
         {
             while (!_isWindowReady)
@@ -576,6 +725,17 @@ namespace Lenovo_Fan_Controller
 
             await FirstRunHelper.ShowFirstRunWarning(this);
 
+            // Initialize Hardware Monitoring
+            if (!ECUtils.Init())
+            {
+                Debug.WriteLine("Show PawnIOInstallDialog");
+                await ShowPawnIOInstallDialog();
+                return;
+            }
+
+            Debug.WriteLine("ECUtils.Init() returned true in MainWindow");
+
+            CreateSuggestedConfigsIfMissing();
             try
             {
                 // Detect current power mode
@@ -593,8 +753,8 @@ namespace Lenovo_Fan_Controller
                 // Apply max RPM setting BEFORE loading config
                 MAX_RPM = SettingsManager.GetMaxRpm();
 
-                LoadConfig(configPath);
-                RestartFanControl();
+                if (LoadConfig(configPath, currentProfile))
+                    ApplyFanCurveToEC();
 
                 // Update UI to reflect current profile
                 SetActiveProfileButton(currentProfile);
@@ -603,43 +763,39 @@ namespace Lenovo_Fan_Controller
             {
                 await ShowDialogSafeAsync("Initialization Error",
                     $"Failed to detect power mode: {ex.Message}");
-                LoadConfig(App.BalancedConfigPath);
-                RestartFanControl();
+                if (LoadConfig(App.BalancedConfigPath, "balance"))
+                    ApplyFanCurveToEC();
             }
 
             // Draw initial curve
             DrawFanCurve();
 
-            // Initialize Hardware Monitoring
-            if (ECUtils.Init())
+            _monitoringTimer = new DispatcherTimer();
+            _monitoringTimer.Interval = TimeSpan.FromSeconds(1);
+            _monitoringTimer.Tick += (s, e) =>
             {
-                Debug.WriteLine("ECUtils.Init() returned true in MainWindow");
-                var timer = new DispatcherTimer();
-                timer.Interval = TimeSpan.FromSeconds(1);
-                timer.Tick += (s, e) =>
+                try
                 {
-                    try
-                    {
-                        int cpuTemp = ECUtils.ReadCpuTemp();
-                        int gpuTemp = ECUtils.ReadGpuTemp();
-                        int cpuFan = ECUtils.ReadFan1Rpm();
-                        int gpuFan = ECUtils.ReadFan2Rpm();
+                    int cpuTemp = ECUtils.ReadCpuTemp();
+                    int gpuTemp = ECUtils.ReadGpuTemp();
+                    int cpuFan = ECUtils.ReadFan1Rpm();
+                    int gpuFan = ECUtils.ReadFan2Rpm();
 
-                        MonitorCpuTemp.Text = $"{cpuTemp} °C";
-                        MonitorGpuTemp.Text = $"{gpuTemp} °C";
-                        MonitorCpuFan.Text = $"{cpuFan} RPM";
-                        MonitorGpuFan.Text = $"{gpuFan} RPM";
-                    }
-                    catch (Exception ex)
-                    {
-                        Debug.WriteLine($"Monitoring Tick Error: {ex.Message}");
-                    }
-                };
-                timer.Start();
-            }
-            else
+                    MonitorCpuTemp.Text = $"{cpuTemp} °C";
+                    MonitorGpuTemp.Text = $"{gpuTemp} °C";
+                    MonitorCpuFan.Text = $"{cpuFan} RPM";
+                    MonitorGpuFan.Text = $"{gpuFan} RPM";
+                }
+                catch (Exception ex)
+                {
+                    Debug.WriteLine($"Monitoring Tick Error: {ex.Message}");
+                }
+            };
+            if (_appWindow.Presenter is OverlappedPresenter presenter &&
+                presenter.State != OverlappedPresenterState.Minimized &&
+                _isWindowVisible)
             {
-                Debug.WriteLine("ECUtils.Init() returned false in MainWindow");
+                _monitoringTimer.Start();
             }
         }
 
@@ -659,7 +815,7 @@ namespace Lenovo_Fan_Controller
             // Highlight active button
             switch (profile)
             {
-                case "default":
+                case "balanced":
                     DefaultBtn.Style = accentStyle;
                     break;
                 case "performance":
@@ -715,15 +871,154 @@ namespace Lenovo_Fan_Controller
             }
         }
 
+        public static int DetectLegionGen()
+        {
+            // Method 1: Read EC chip ID (read-only, no risk)
+            byte idLow = ECUtils.ReadECByte(0x2000);
+            byte idHigh = ECUtils.ReadECByte(0x2001);
+            ushort chipId = (ushort)((idLow << 8) | idHigh);
+
+            Debug.WriteLine($"EC chip ID: 0x{chipId:X4}");
+
+            switch (chipId)
+            {
+                case 0x5570:
+                case 0x5571:
+                    Debug.WriteLine("Detected Gen5 by chip ID");
+                    return 5;
+                case 0x8226:
+                case 0x8227:
+                    Debug.WriteLine("Detected Gen6 by chip ID");
+                    return 6;
+                default:
+                    Debug.WriteLine($"Unknown chip ID: 0x{chipId:X4}, falling back to register test");
+                    break;
+            }
+
+            // Method 2: Test registers (fallback for unknown chips)
+            return DetectLegionGenByRegisters();
+        }
+
+        private static int DetectLegionGenByRegisters()
+        {
+            // Read Gen5 registers
+            byte fan1AccGen5 = ECUtils.ReadECByte(0xC3DC);
+            byte fan1DecGen5 = ECUtils.ReadECByte(0xC3DD);
+            byte fan2AccGen5 = ECUtils.ReadECByte(0xC3DE);
+            byte fan2DecGen5 = ECUtils.ReadECByte(0xC3DF);
+
+            // Read Gen6 registers (first byte of each table)
+            byte fanAccGen6 = ECUtils.ReadECByte(0xC560);
+            byte fanDecGen6 = ECUtils.ReadECByte(0xC570);
+
+            // Check if registers are valid (not 0xFF)
+            bool hasGen5 = (fan1AccGen5 != 0xFF && fan1AccGen5 != 0x00) ||
+                           (fan1DecGen5 != 0xFF && fan1DecGen5 != 0x00) ||
+                           (fan2AccGen5 != 0xFF && fan2AccGen5 != 0x00) ||
+                           (fan2DecGen5 != 0xFF && fan2DecGen5 != 0x00);
+
+            bool hasGen6 = (fanAccGen6 != 0xFF && fanAccGen6 != 0x00) &&
+                           (fanDecGen6 != 0xFF && fanDecGen6 != 0x00);
+
+            Debug.WriteLine($"Gen5 register test: {(hasGen5 ? "valid" : "invalid")}");
+            Debug.WriteLine($"Gen6 register test: {(hasGen6 ? "valid" : "invalid")}");
+
+            if (hasGen6 && !hasGen5)
+            {
+                Debug.WriteLine("Detected Gen6 by register test");
+                return 6;
+            }
+
+            if (hasGen5 && !hasGen6)
+            {
+                Debug.WriteLine("Detected Gen5 by register test");
+                return 5;
+            }
+
+            // Both exist or both invalid - default to Gen5
+            Debug.WriteLine("Register test ambiguous, defaulting to Gen5");
+            return 5;
+        }
+
         #region Config Management
 
-        private void LoadConfig(string configPath)
+        private string ReadCurrentECConfig()
+        {
+            byte[] rpmPoints = new byte[9];
+            byte[] cpuTemps = new byte[9];
+            byte[] gpuTemps = new byte[9];
+
+            for (int i = 0; i < 9; i++)
+            {
+                rpmPoints[i] = ECUtils.ReadECByte((ushort)(0xC551 + i));
+                cpuTemps[i] = ECUtils.ReadECByte((ushort)(0xC580 + i));
+                gpuTemps[i] = ECUtils.ReadECByte((ushort)(0xC5A0 + i));
+            }
+
+            int legionGen = DetectLegionGen();
+
+            byte acclValue, declValue;
+
+            if (legionGen == 5)
+            {
+                acclValue = ECUtils.ReadECByte(0xC3DC);
+                declValue = ECUtils.ReadECByte(0xC3DD);
+            }
+            else
+            {
+                acclValue = ECUtils.ReadECByte(0xC560);
+                declValue = ECUtils.ReadECByte(0xC570);
+            }
+
+            int pointCount = ECUtils.ReadECByte(0xC535);
+
+            // Read hysteresis from EC if available, otherwise use 3
+            int hysteresis = ECUtils.ReadECByte(0xC5FE);
+            if (hysteresis < 1 || hysteresis > 8)
+            {
+                hysteresis = 3;
+            }
+
+            return $@"legion_gen : {legionGen}
+fan_curve_points : {pointCount}
+fan_accl_value : {acclValue}
+fan_deccl_value : {declValue}
+hysteresis : {hysteresis}
+fan_rpm_points : {string.Join(" ", rpmPoints.Select(b => (b * 100).ToString()))}
+cpu_temps_ramp_up : {string.Join(" ", cpuTemps)}
+cpu_temps_ramp_down : {string.Join(" ", cpuTemps.Select(b => Math.Max(0, b - hysteresis)))}
+gpu_temps_ramp_up : {string.Join(" ", gpuTemps)}
+gpu_temps_ramp_down : {string.Join(" ", gpuTemps.Select(b => Math.Max(0, b - hysteresis)))}
+hst_temps_ramp_up : {string.Join(" ", gpuTemps)}
+hst_temps_ramp_down : {string.Join(" ", gpuTemps.Select(b => Math.Max(0, b - hysteresis)))}";
+        }
+
+        private string GetBackupPath(string profileName)
+        {
+            string backupDir = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments), "LegionFanController", "Backups");
+            return Path.Combine(backupDir, $"fan_config_{profileName}_backup.txt");
+        }
+
+        private bool LoadConfig(string configPath, string profileName)
         {
             try
             {
                 if (!File.Exists(configPath))
                 {
-                    File.WriteAllText(configPath, GetDefaultConfigContent());
+                    string backupPath = GetBackupPath(profileName);
+                    string defaultContent = ReadCurrentECConfig();
+                    if (!File.Exists(backupPath))
+                    {
+                        Debug.WriteLine($"backupPath: {Path.GetDirectoryName(backupPath)}");
+                        Directory.CreateDirectory(Path.GetDirectoryName(backupPath));
+                        File.WriteAllText(backupPath, defaultContent);
+                    }
+
+                    var defaultLines = defaultContent.Split(new[] { Environment.NewLine }, StringSplitOptions.RemoveEmptyEntries);
+                    currentConfig = ParseConfig(defaultLines);
+                    LoadCurvePointsFromConfig();
+                    UpdateDeviceSelector();
+                    return false;
                 }
 
                 var lines = File.ReadAllLines(configPath)
@@ -733,13 +1028,15 @@ namespace Lenovo_Fan_Controller
                 currentConfig = ParseConfig(lines);
                 LoadCurvePointsFromConfig();
                 UpdateDeviceSelector();
+                return true;
             }
             catch (Exception ex)
             {
                 _ = ShowDialogSafeAsync("Config Error", $"Failed to load config: {ex.Message}");
                 currentConfig = CreateDefaultConfig();
-                InitializeCurvePoints(5);
-                UpdateDeviceSelector();
+                return false;
+                //InitializeCurvePoints(5);
+                //UpdateDeviceSelector();
             }
         }
 
@@ -751,19 +1048,12 @@ namespace Lenovo_Fan_Controller
 
             for (int i = 0; i < pointCount; i++)
             {
-                int rpm = Math.Min(currentConfig.FanRpmPoints[i], MAX_RPM);
+                int cpuTemp = Math.Clamp(currentConfig.CpuTempsRampUp[i], MIN_TEMP, MAX_TEMP);
+                int gpuTemp = Math.Clamp(currentConfig.GpuTempsRampUp[i], MIN_TEMP, MAX_TEMP);
+                int rpm = Math.Clamp(currentConfig.FanRpmPoints[i], MIN_RPM, MAX_RPM);
 
-                cpuCurvePoints.Add(new CurvePoint
-                {
-                    Temp = currentConfig.CpuTempsRampUp[i],
-                    Rpm = rpm
-                });
-
-                gpuCurvePoints.Add(new CurvePoint
-                {
-                    Temp = currentConfig.GpuTempsRampUp[i],
-                    Rpm = rpm
-                });
+                cpuCurvePoints.Add(new CurvePoint { Temp = cpuTemp, Rpm = rpm });
+                gpuCurvePoints.Add(new CurvePoint { Temp = gpuTemp, Rpm = rpm });
             }
 
             UpdatePointCountText();
@@ -860,6 +1150,143 @@ hst_temps_ramp_up : 30 50 55 65 70
 hst_temps_ramp_down : 28 48 53 63 68";
         }
 
+        private void ApplyFanCurveToEC(bool isRestore = false)
+        {
+            if (currentConfig == null || cpuCurvePoints.Count < 2) return;
+
+            for (int i = 1; i < cpuCurvePoints.Count; i++)
+            {
+                if (cpuCurvePoints[i].Temp <= cpuCurvePoints[i - 1].Temp) return;
+            }
+
+            int legionGen = currentConfig.LegionGeneration;
+            byte acclValue = (byte)Math.Clamp(AccVal.Value, 1, 15);
+            byte declValue = (byte)Math.Clamp(DecVal.Value, 1, 15);
+
+            byte[] rpmPoints = cpuCurvePoints.Select(p => (byte)Math.Clamp(p.Rpm / 100, 0, 255)).ToArray();
+
+            byte[] cpuRampUp = cpuCurvePoints.Select(p => (byte)Math.Clamp(p.Temp, 0, 255)).ToArray();
+            byte[] cpuRampDown = cpuCurvePoints.Select(p => (byte)Math.Clamp(Math.Max(0, p.Temp - currentConfig.Hysteresis), 0, 255)).ToArray();
+
+            byte[] gpuRampUp = gpuCurvePoints.Select(p => (byte)Math.Clamp(p.Temp, 0, 255)).ToArray();
+            byte[] gpuRampDown = gpuCurvePoints.Select(p => (byte)Math.Clamp(Math.Max(0, p.Temp - currentConfig.Hysteresis), 0, 255)).ToArray();
+
+            ECWriter.WriteFanAcclDeccl(legionGen, acclValue, declValue);
+            ECWriter.WriteFanPointCount();
+            ECWriter.WriteFanRpmPoints(rpmPoints);
+            ECWriter.WriteTemperatureRamp(cpuRampUp, cpuRampDown,
+                (ushort)ECWriteRegisters.CPU_RAMP_UP, (ushort)ECWriteRegisters.CPU_RAMP_DOWN);
+            ECWriter.WriteTemperatureRamp(gpuRampUp, gpuRampDown,
+                (ushort)ECWriteRegisters.GPU_RAMP_UP, (ushort)ECWriteRegisters.GPU_RAMP_DOWN);
+
+            if (isRestore)
+            {
+                byte[] hstRampUp = currentConfig.HstTempsRampUp.Select(t => (byte)Math.Clamp(t, 0, 255)).ToArray();
+                byte[] hstRampDown = currentConfig.HstTempsRampDown.Select(t => (byte)Math.Clamp(t, 0, 255)).ToArray();
+                ECWriter.WriteTemperatureRamp(hstRampUp, hstRampDown,
+                    (ushort)ECWriteRegisters.HST_RAMP_UP, (ushort)ECWriteRegisters.HST_RAMP_DOWN);
+            }
+            else {
+                ECWriter.WriteTemperatureRamp(gpuRampUp, gpuRampDown,
+                    (ushort)ECWriteRegisters.HST_RAMP_UP, (ushort)ECWriteRegisters.HST_RAMP_DOWN);
+            }
+            
+            ECWriter.WriteStopRgbFanWake();
+            ECWriter.WriteFanTableChangeCounter(0x64);
+        }
+
+        private async void LoadSuggestedConfig_Click(object sender, RoutedEventArgs e)
+        {
+            if (sender is Button btn && btn.Tag is string mode)
+            {
+                if (LoadSuggestedBtn.Flyout is Flyout flyout)
+                {
+                    flyout.Hide();
+                }
+
+                string suggestedPath = mode switch
+                {
+                    "performance" => App.SuggestedPerformancePath,
+                    "quiet" => App.SuggestedQuietPath,
+                    _ => App.SuggestedBalancedPath
+                };
+
+                if (!File.Exists(suggestedPath))
+                {
+                    await ShowDialogSafeAsync("Suggested Config Not Found",
+                        $"Suggested configuration for {mode} mode not found.\n\n" +
+                        $"Please place the file at:\n{suggestedPath}");
+                    return;
+                }
+
+                var result = await ShowConfirmationDialogAsync("Load Suggested Config",
+                    $"Load suggested configuration for {mode} mode?\n\n" +
+                    "This will replace your current curve settings. You can save your current settings first if needed.");
+
+                if (result != ContentDialogResult.Primary)
+                    return;
+
+                try
+                {
+                    var lines = File.ReadAllLines(suggestedPath)
+                        .Where(line => !string.IsNullOrWhiteSpace(line))
+                        .ToArray();
+
+                    var suggestedConfig = ParseConfig(lines);
+
+                    // Apply to current editing curve
+                    currentConfig.Hysteresis = suggestedConfig.Hysteresis;
+                    currentConfig.AccelerationValue = suggestedConfig.AccelerationValue;
+                    currentConfig.DecelerationValue = suggestedConfig.DecelerationValue;
+
+                    // Load curve points
+                    int pointCount = suggestedConfig.CpuTempsRampUp.Length;
+                    cpuCurvePoints.Clear();
+                    gpuCurvePoints.Clear();
+
+                    for (int i = 0; i < pointCount; i++)
+                    {
+                        int cpuTemp = Math.Clamp(suggestedConfig.CpuTempsRampUp[i], MIN_TEMP, MAX_TEMP);
+                        int gpuTemp = Math.Clamp(suggestedConfig.GpuTempsRampUp[i], MIN_TEMP, MAX_TEMP);
+                        int rpm = Math.Clamp(suggestedConfig.FanRpmPoints[i], MIN_RPM, MAX_RPM);
+
+                        cpuCurvePoints.Add(new CurvePoint { Temp = cpuTemp, Rpm = rpm });
+                        gpuCurvePoints.Add(new CurvePoint { Temp = gpuTemp, Rpm = rpm });
+                    }
+
+                    // Update UI
+                    AccVal.Value = suggestedConfig.AccelerationValue;
+                    DecVal.Value = suggestedConfig.DecelerationValue;
+
+                    UpdatePointCountText();
+                    UpdateDeviceSelector();
+                    DrawFanCurve();
+
+                    await ShowDialogSafeAsync("Config Loaded",
+                        $"Suggested {mode} configuration loaded.\n\nClick Save to apply to EC.");
+                }
+                catch (Exception ex)
+                {
+                    await ShowDialogSafeAsync("Error", $"Failed to load suggested config: {ex.Message}");
+                }
+            }
+        }
+
+        private async Task<ContentDialogResult> ShowConfirmationDialogAsync(string title, string message)
+        {
+            var dialog = new ContentDialog
+            {
+                Title = title,
+                Content = message,
+                PrimaryButtonText = "Load",
+                CloseButtonText = "Cancel",
+                DefaultButton = ContentDialogButton.Primary,
+                XamlRoot = this.Content?.XamlRoot
+            };
+
+            return await dialog.ShowAsync();
+        }
+
         private void SaveConfig()
         {
             try
@@ -882,12 +1309,75 @@ hst_temps_ramp_down : 28 48 53 63 68";
 
                 string configContent = GenerateConfigContent();
                 File.WriteAllText(configPath, configContent);
+                ApplyFanCurveToEC();
                 ShowSuccessDialog("Configuration saved", "");
             }
             catch (Exception ex)
             {
                 ShowErrorDialog("Error Saving Config", $"Failed to save configuration: {ex.Message} ");
             }
+        }
+
+        private void CreateSuggestedConfigsIfMissing()
+        {
+            // Create default suggested configs
+            CreateSuggestedConfigIfMissing(App.SuggestedBalancedPath, GetDefaultBalancedSuggested());
+            CreateSuggestedConfigIfMissing(App.SuggestedPerformancePath, GetDefaultPerformanceSuggested());
+            CreateSuggestedConfigIfMissing(App.SuggestedQuietPath, GetDefaultQuietSuggested());
+        }
+
+        private void CreateSuggestedConfigIfMissing(string path, string content)
+        {
+            if (!File.Exists(path))
+            {
+                Directory.CreateDirectory(Path.GetDirectoryName(path));
+                File.WriteAllText(path, content);
+            }
+        }
+
+        private string GetDefaultBalancedSuggested()
+        {
+            return @"fan_curve_points : 9
+fan_accl_value : 2
+fan_deccl_value : 2
+hysteresis : 3
+fan_rpm_points : 0 1500 2200 3200 3500 3800 4100 4400 4700
+cpu_temps_ramp_up : 30 45 55 60 65 70 75 80 85
+cpu_temps_ramp_down : 28 43 53 58 63 68 73 78 83
+gpu_temps_ramp_up : 30 50 55 60 63 66 69 72 75
+gpu_temps_ramp_down : 28 48 53 58 61 63 67 70 73
+hst_temps_ramp_up : 30 50 55 65 70 75 80 85 90
+hst_temps_ramp_down : 28 48 53 63 68 73 78 83 85";
+        }
+
+        private string GetDefaultPerformanceSuggested()
+        {
+            return @"fan_curve_points : 9
+fan_accl_value : 1
+fan_deccl_value : 1
+hysteresis : 3
+fan_rpm_points : 0 1800 2600 3400 3900 4200 4500 4800 5000
+cpu_temps_ramp_up : 30 45 55 60 65 70 75 80 85
+cpu_temps_ramp_down : 28 43 53 58 63 68 73 78 83
+gpu_temps_ramp_up : 30 45 55 60 65 70 75 80 85
+gpu_temps_ramp_down : 28 43 53 58 63 68 73 78 83
+hst_temps_ramp_up : 30 50 55 65 70 75 80 85 90
+hst_temps_ramp_down : 28 48 53 63 68 73 78 83 85";
+        }
+
+        private string GetDefaultQuietSuggested()
+        {
+            return @"fan_curve_points : 9
+fan_accl_value : 3
+fan_deccl_value : 4
+hysteresis : 4
+fan_rpm_points : 0 0 0 1500 1800 2100 2400 2700 3000
+cpu_temps_ramp_up : 30 45 55 60 65 70 75 80 85
+cpu_temps_ramp_down : 28 43 53 58 63 68 73 78 83
+gpu_temps_ramp_up : 30 45 55 60 65 70 75 80 85
+gpu_temps_ramp_down : 28 43 53 58 63 68 73 78 83
+hst_temps_ramp_up : 30 45 55 65 70 75 80 85 90
+hst_temps_ramp_down : 28 43 53 63 68 73 78 83 85";
         }
 
         private string GenerateConfigContent()
@@ -968,6 +1458,11 @@ hst_temps_ramp_down : {string.Join(" ", gpuRampDown)}";
 
         private void DrawFanCurve()
         {
+            if (DispatcherQueue.HasThreadAccess == false)
+            {
+                DispatcherQueue.TryEnqueue(() => DrawFanCurve());
+                return;
+            }
             if (FanCurveCanvas == null || FanCurveCanvas.ActualWidth == 0) return;
 
             FanCurveCanvas.Children.Clear();
@@ -1681,6 +2176,37 @@ hst_temps_ramp_down : {string.Join(" ", gpuRampDown)}";
 
         #region Event Handlers
 
+        private async Task<bool> WaitForECModeChangeAsync(int timeoutMs = 3000)
+        {
+            // Store values before mode change
+            byte beforeCpu = ECUtils.ReadECByte(0xC580);
+            byte beforeGpu = ECUtils.ReadECByte(0xC5A0);
+            byte beforeRpm = ECUtils.ReadECByte(0xC551);
+
+            int elapsed = 0;
+            int interval = 50;
+
+            while (elapsed < timeoutMs)
+            {
+                await Task.Delay(interval);
+                elapsed += interval;
+
+                byte afterCpu = ECUtils.ReadECByte(0xC580);
+                byte afterGpu = ECUtils.ReadECByte(0xC5A0);
+                byte afterRpm = ECUtils.ReadECByte(0xC551);
+
+                // Check if any of the key registers changed
+                if (afterCpu != beforeCpu || afterGpu != beforeGpu || afterRpm != beforeRpm)
+                {
+                    Debug.WriteLine($"EC mode changed: CPU {beforeCpu}->{afterCpu}, GPU {beforeGpu}->{afterGpu}, RPM {beforeRpm}->{afterRpm}");
+                    await Task.Delay(100); // Wait for stability
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
         private async void ProfileButton_Click(object sender, RoutedEventArgs e)
         {
             if (sender is Button button && button.Tag is string newProfile)
@@ -1696,7 +2222,8 @@ hst_temps_ramp_down : {string.Join(" ", gpuRampDown)}";
 
                 try
                 {
-                    bool success = PowerModeHelper.SetPowerMode(powerMode);
+                    // Wait for system to apply default EC curve for this mode, then override with user config
+                    bool success = await PowerModeHelper.SetPowerModeAndWaitAsync(powerMode, currentConfig.LegionGeneration);
 
                     if (!success)
                     {
@@ -1717,8 +2244,8 @@ hst_temps_ramp_down : {string.Join(" ", gpuRampDown)}";
                         _ => App.BalancedConfigPath
                     };
 
-                    LoadConfig(configPath);
-                    RestartFanControl();
+                    if (LoadConfig(configPath, newProfile))
+                        ApplyFanCurveToEC();
                     SetActiveProfileButton(newProfile);
                 }
                 finally
@@ -1750,28 +2277,58 @@ hst_temps_ramp_down : {string.Join(" ", gpuRampDown)}";
         {
             try
             {
-                foreach (var process in Process.GetProcessesByName("FanControl"))
-                {
-                    try
-                    {
-                        process.Kill();
-                        process.WaitForExit(1000);
-                    }
-                    catch { }
-                }
-
-                Process.Start(new ProcessStartInfo
-                {
-                    FileName = App.FanControlPath,
-                    UseShellExecute = false,
-                    CreateNoWindow = true,
-                    WindowStyle = ProcessWindowStyle.Hidden
-                });
-
+                ApplyFanCurveToEC();
+                ShowSuccessDialog("Fan Control", "Fan curve reapplied");
             }
             catch (Exception ex)
             {
                 ShowErrorDialog("Error", $"Failed to restart service: {ex.Message}");
+            }
+        }
+
+        private async void RestoreDefaultBtn_Click(object sender, RoutedEventArgs e)
+        {
+            var result = await ShowConfirmationDialogAsync("Restore Default Curve",
+                $"Restore default fan curve for {currentProfile} mode?\n\n" +
+                "This will replace your current settings and apply to EC immediately.");
+
+            if (result != ContentDialogResult.Primary)
+                return;
+
+            RestoreDefaultConfig();
+        }
+
+        private void RestoreDefaultConfig()
+        {
+            string backupPath = GetBackupPath(currentProfile);
+
+            if (!File.Exists(backupPath))
+            {
+                ShowErrorDialog("Error", $"No backup found for {currentProfile} mode.\n\nBackup path: {backupPath}");
+                return;
+            }
+
+            try
+            {
+                var lines = File.ReadAllLines(backupPath)
+                    .Where(line => !string.IsNullOrWhiteSpace(line))
+                    .ToArray();
+
+                currentConfig = ParseConfig(lines);
+                LoadCurvePointsFromConfig();
+                UpdateDeviceSelector();
+                DrawFanCurve();
+                ApplyFanCurveToEC(true);
+
+                // Update UI sliders
+                AccVal.Value = currentConfig.AccelerationValue;
+                DecVal.Value = currentConfig.DecelerationValue;
+
+                ShowSuccessDialog("Restored", $"Default curve for {currentProfile} mode restored.");
+            }
+            catch (Exception ex)
+            {
+                ShowErrorDialog("Error", $"Failed to restore: {ex.Message}");
             }
         }
 
@@ -1854,38 +2411,6 @@ hst_temps_ramp_down : {string.Join(" ", gpuRampDown)}";
             await dialog.ShowAsync();
         }
 
-        private void RestartFanControl()
-        {
-            try
-            {
-                foreach (var process in Process.GetProcessesByName("FanControl"))
-                {
-                    try
-                    {
-                        process.Kill();
-                        process.WaitForExit(1000);
-                    }
-                    catch (Exception ex)
-                    {
-                        Debug.WriteLine($"Kill process error: {ex.Message}");
-                    }
-                }
-                var startInfo = new ProcessStartInfo
-                {
-                    FileName = App.FanControlPath,
-                    UseShellExecute = false,
-                    CreateNoWindow = true,
-                    WindowStyle = ProcessWindowStyle.Hidden
-                };
-
-                Process.Start(startInfo);
-            }
-            catch (Exception ex)
-            {
-                ShowErrorDialog("Fan Control Error", $"Failed to restart fan control: {ex.Message}");
-            }
-        }
-
         #endregion
     }
 
@@ -1912,6 +2437,9 @@ hst_temps_ramp_down : {string.Join(" ", gpuRampDown)}";
 
         [System.Runtime.InteropServices.DllImport("user32.dll")]
         public static extern bool ShowWindow(IntPtr hWnd, int nCmdShow);
+
+        [DllImport("user32.dll")]
+        public static extern bool SetForegroundWindow(IntPtr hWnd);
     }
 
     public class RelayCommand : ICommand

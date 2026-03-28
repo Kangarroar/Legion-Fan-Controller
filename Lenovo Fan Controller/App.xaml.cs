@@ -10,12 +10,14 @@ namespace Lenovo_Fan_Controller
         public static string BalancedConfigPath { get; private set; }
         public static string PerformanceConfigPath { get; private set; }
         public static string QuietConfigPath { get; private set; }
-
+        public static string SuggestedBalancedPath { get; private set; }
+        public static string SuggestedPerformancePath { get; private set; }
+        public static string SuggestedQuietPath { get; private set; }
         public App()
         {
             this.InitializeComponent();
             InitializePaths();
-            InitializeConfigFiles();
+            //InitializeConfigFiles();
 
         }
 
@@ -23,13 +25,18 @@ namespace Lenovo_Fan_Controller
         private void InitializePaths()
         {
             string baseDir = AppContext.BaseDirectory;
-            string fanControlDir = Path.Combine(baseDir, "Fan Control");
-            Directory.CreateDirectory(fanControlDir);
+            string configDir = Path.Combine(baseDir, "Config");
+            string suggestedDir = Path.Combine(configDir, "Suggested");
+            Directory.CreateDirectory(configDir);
+            Directory.CreateDirectory(suggestedDir);
 
-            FanControlPath = Path.Combine(fanControlDir, "FanControl.exe");
-            BalancedConfigPath = Path.Combine(fanControlDir, "fan_config_balanced.txt");
-            PerformanceConfigPath = Path.Combine(fanControlDir, "fan_config_perfcust.txt");
-            QuietConfigPath = Path.Combine(fanControlDir, "fan_config_quiet.txt");
+            BalancedConfigPath = Path.Combine(configDir, "fan_config_balanced.txt");
+            PerformanceConfigPath = Path.Combine(configDir, "fan_config_perfcust.txt");
+            QuietConfigPath = Path.Combine(configDir, "fan_config_quiet.txt");
+
+            SuggestedBalancedPath = Path.Combine(suggestedDir, "fan_config_balanced.txt");
+            SuggestedPerformancePath = Path.Combine(suggestedDir, "fan_config_perfcust.txt");
+            SuggestedQuietPath = Path.Combine(suggestedDir, "fan_config_quiet.txt");
         }
 
         private void InitializeConfigFiles()
