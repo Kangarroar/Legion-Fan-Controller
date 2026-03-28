@@ -253,6 +253,75 @@ namespace LegionFanController.Hardware
         {
             return ReadECByte((ushort)ECRegister.VRM_TEMP);
         }
+
+        public static int DetectLegionGen()
+        {
+            // Method 1: Read EC chip ID (read-only, no risk)
+            byte idLow = ECUtils.ReadECByte(0x2000);
+            byte idHigh = ECUtils.ReadECByte(0x2001);
+            ushort chipId = (ushort)((idLow << 8) | idHigh);
+
+            Debug.WriteLine($"EC chip ID: 0x{chipId:X4}");
+
+            switch (chipId)
+            {
+                case 0x5570:
+                case 0x5571:
+                    Debug.WriteLine("Detected Gen5 by chip ID");
+                    return 5;
+                case 0x8226:
+                case 0x8227:
+                    Debug.WriteLine("Detected Gen6 by chip ID");
+                    return 6;
+                default:
+                    Debug.WriteLine($"Unknown chip ID: 0x{chipId:X4}, falling back to register test");
+                    break;
+            }
+
+            // Method 2: Test registers (fallback for unknown chips)
+            return DetectLegionGenByRegisters();
+        }
+
+        private static int DetectLegionGenByRegisters()
+        {
+            // Read Gen5 registers
+            byte fan1AccGen5 = ECUtils.ReadECByte(0xC3DC);
+            byte fan1DecGen5 = ECUtils.ReadECByte(0xC3DD);
+            byte fan2AccGen5 = ECUtils.ReadECByte(0xC3DE);
+            byte fan2DecGen5 = ECUtils.ReadECByte(0xC3DF);
+
+            // Read Gen6 registers (first byte of each table)
+            byte fanAccGen6 = ECUtils.ReadECByte(0xC560);
+            byte fanDecGen6 = ECUtils.ReadECByte(0xC570);
+
+            // Check if registers are valid (not 0xFF)
+            bool hasGen5 = (fan1AccGen5 != 0xFF && fan1AccGen5 != 0x00) ||
+                           (fan1DecGen5 != 0xFF && fan1DecGen5 != 0x00) ||
+                           (fan2AccGen5 != 0xFF && fan2AccGen5 != 0x00) ||
+                           (fan2DecGen5 != 0xFF && fan2DecGen5 != 0x00);
+
+            bool hasGen6 = (fanAccGen6 != 0xFF && fanAccGen6 != 0x00) &&
+                           (fanDecGen6 != 0xFF && fanDecGen6 != 0x00);
+
+            Debug.WriteLine($"Gen5 register test: {(hasGen5 ? "valid" : "invalid")}");
+            Debug.WriteLine($"Gen6 register test: {(hasGen6 ? "valid" : "invalid")}");
+
+            if (hasGen6 && !hasGen5)
+            {
+                Debug.WriteLine("Detected Gen6 by register test");
+                return 6;
+            }
+
+            if (hasGen5 && !hasGen6)
+            {
+                Debug.WriteLine("Detected Gen5 by register test");
+                return 5;
+            }
+
+            // Both exist or both invalid - default to Gen5
+            Debug.WriteLine("Register test ambiguous, defaulting to Gen5");
+            return 5;
+        }
     }
 
     internal enum ECRegister : ushort

@@ -1,3 +1,4 @@
+using LegionFanController.Hardware;
 using Microsoft.Win32;
 using System;
 
@@ -12,6 +13,7 @@ namespace Lenovo_Fan_Controller
         private const string LockPointsKey = "LockPoints";
         private const string EnableSafeguardsKey = "EnableSafeguards";
         private const string AllowResizingKey = "AllowResizing";
+        private const string LegionGenKey = "LegionGeneration";
 
         // Default values
         public const bool DefaultShowGpuTemp = true;
@@ -27,6 +29,41 @@ namespace Lenovo_Fan_Controller
         /// <summary>
         ///////////////////////////////////
         /// </summary>
+
+        public static int LegionGeneration
+        {
+            get
+            {
+                try
+                {
+                    using var regKey = Registry.CurrentUser.OpenSubKey(RegistryKeyPath);
+                    if (regKey?.GetValue(LegionGenKey) is int value && (value == 5 || value == 6))
+                    {
+                        return value;
+                    }
+                }
+                catch { }
+
+                int detected = ECUtils.DetectLegionGen();
+                SetLegionGeneration(detected);
+                return detected;
+            }
+            set
+            {
+                SetLegionGeneration(value);
+            }
+        }
+
+        private static void SetLegionGeneration(int value)
+        {
+            try
+            {
+                using var regKey = Registry.CurrentUser.CreateSubKey(RegistryKeyPath);
+                regKey?.SetValue(LegionGenKey, value, RegistryValueKind.DWord);
+            }
+            catch { }
+        }
+
         public static bool GetShowGpuTemp()
         {
             return GetBoolSetting(ShowGpuTempKey, DefaultShowGpuTemp);

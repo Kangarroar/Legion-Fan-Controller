@@ -13,6 +13,7 @@ using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Runtime.InteropServices;
+using System.Text.Json;
 using System.Threading.Tasks;
 using System.Windows.Input;
 using WinRT.Interop;
@@ -25,6 +26,7 @@ namespace Lenovo_Fan_Controller
         // Configuration
         private FanConfig currentConfig;
         private string currentProfile = "balance";
+        private int legionGeneration;
 
         // Window state
         private XamlRoot _xamlRoot;
@@ -735,6 +737,8 @@ namespace Lenovo_Fan_Controller
 
             Debug.WriteLine("ECUtils.Init() returned true in MainWindow");
 
+            legionGeneration = SettingsManager.LegionGeneration;
+
             CreateSuggestedConfigsIfMissing();
             try
             {
@@ -743,18 +747,12 @@ namespace Lenovo_Fan_Controller
                 currentProfile = PowerModeHelper.PowerModeToProfile(powerMode);
 
                 // Load the corresponding config
-                string configPath = currentProfile switch
-                {
-                    "performance" => App.PerformanceConfigPath,
-                    "quiet" => App.QuietConfigPath,
-                    _ => App.BalancedConfigPath
-                };
+                string configPath = GetConfigPath(currentProfile);
 
                 // Apply max RPM setting BEFORE loading config
                 MAX_RPM = SettingsManager.GetMaxRpm();
 
-                if (LoadConfig(configPath, currentProfile))
-                    ApplyFanCurveToEC();
+                LoadConfig(configPath, currentProfile);
 
                 // Update UI to reflect current profile
                 SetActiveProfileButton(currentProfile);
@@ -763,8 +761,7 @@ namespace Lenovo_Fan_Controller
             {
                 await ShowDialogSafeAsync("Initialization Error",
                     $"Failed to detect power mode: {ex.Message}");
-                if (LoadConfig(App.BalancedConfigPath, "balance"))
-                    ApplyFanCurveToEC();
+                LoadConfig(App.BalancedConfigPath, "balance");
             }
 
             // Draw initial curve
@@ -797,6 +794,16 @@ namespace Lenovo_Fan_Controller
             {
                 _monitoringTimer.Start();
             }
+        }
+
+        private string GetConfigPath(string profile)
+        {
+            return profile switch
+            {
+                "performance" => App.PerformanceConfigPath,
+                "quiet" => App.QuietConfigPath,
+                _ => App.BalancedConfigPath
+            };
         }
 
         private void SetActiveProfileButton(string profile)
@@ -871,74 +878,7 @@ namespace Lenovo_Fan_Controller
             }
         }
 
-        public static int DetectLegionGen()
-        {
-            // Method 1: Read EC chip ID (read-only, no risk)
-            byte idLow = ECUtils.ReadECByte(0x2000);
-            byte idHigh = ECUtils.ReadECByte(0x2001);
-            ushort chipId = (ushort)((idLow << 8) | idHigh);
 
-            Debug.WriteLine($"EC chip ID: 0x{chipId:X4}");
-
-            switch (chipId)
-            {
-                case 0x5570:
-                case 0x5571:
-                    Debug.WriteLine("Detected Gen5 by chip ID");
-                    return 5;
-                case 0x8226:
-                case 0x8227:
-                    Debug.WriteLine("Detected Gen6 by chip ID");
-                    return 6;
-                default:
-                    Debug.WriteLine($"Unknown chip ID: 0x{chipId:X4}, falling back to register test");
-                    break;
-            }
-
-            // Method 2: Test registers (fallback for unknown chips)
-            return DetectLegionGenByRegisters();
-        }
-
-        private static int DetectLegionGenByRegisters()
-        {
-            // Read Gen5 registers
-            byte fan1AccGen5 = ECUtils.ReadECByte(0xC3DC);
-            byte fan1DecGen5 = ECUtils.ReadECByte(0xC3DD);
-            byte fan2AccGen5 = ECUtils.ReadECByte(0xC3DE);
-            byte fan2DecGen5 = ECUtils.ReadECByte(0xC3DF);
-
-            // Read Gen6 registers (first byte of each table)
-            byte fanAccGen6 = ECUtils.ReadECByte(0xC560);
-            byte fanDecGen6 = ECUtils.ReadECByte(0xC570);
-
-            // Check if registers are valid (not 0xFF)
-            bool hasGen5 = (fan1AccGen5 != 0xFF && fan1AccGen5 != 0x00) ||
-                           (fan1DecGen5 != 0xFF && fan1DecGen5 != 0x00) ||
-                           (fan2AccGen5 != 0xFF && fan2AccGen5 != 0x00) ||
-                           (fan2DecGen5 != 0xFF && fan2DecGen5 != 0x00);
-
-            bool hasGen6 = (fanAccGen6 != 0xFF && fanAccGen6 != 0x00) &&
-                           (fanDecGen6 != 0xFF && fanDecGen6 != 0x00);
-
-            Debug.WriteLine($"Gen5 register test: {(hasGen5 ? "valid" : "invalid")}");
-            Debug.WriteLine($"Gen6 register test: {(hasGen6 ? "valid" : "invalid")}");
-
-            if (hasGen6 && !hasGen5)
-            {
-                Debug.WriteLine("Detected Gen6 by register test");
-                return 6;
-            }
-
-            if (hasGen5 && !hasGen6)
-            {
-                Debug.WriteLine("Detected Gen5 by register test");
-                return 5;
-            }
-
-            // Both exist or both invalid - default to Gen5
-            Debug.WriteLine("Register test ambiguous, defaulting to Gen5");
-            return 5;
-        }
 
         #region Config Management
 
@@ -955,11 +895,9 @@ namespace Lenovo_Fan_Controller
                 gpuTemps[i] = ECUtils.ReadECByte((ushort)(0xC5A0 + i));
             }
 
-            int legionGen = DetectLegionGen();
-
             byte acclValue, declValue;
 
-            if (legionGen == 5)
+            if (legionGeneration == 5)
             {
                 acclValue = ECUtils.ReadECByte(0xC3DC);
                 declValue = ECUtils.ReadECByte(0xC3DD);
@@ -979,7 +917,7 @@ namespace Lenovo_Fan_Controller
                 hysteresis = 3;
             }
 
-            return $@"legion_gen : {legionGen}
+            return $@"legion_gen : {legionGeneration}
 fan_curve_points : {pointCount}
 fan_accl_value : {acclValue}
 fan_deccl_value : {declValue}
@@ -993,48 +931,42 @@ hst_temps_ramp_up : {string.Join(" ", gpuTemps)}
 hst_temps_ramp_down : {string.Join(" ", gpuTemps.Select(b => Math.Max(0, b - hysteresis)))}";
         }
 
-        private string GetBackupPath(string profileName)
+        private string GetBackupPath()
         {
             string backupDir = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments), "LegionFanController", "Backups");
-            return Path.Combine(backupDir, $"fan_config_{profileName}_backup.txt");
+            return Path.Combine(backupDir, $"fan_config_{currentProfile}_backup.txt");
         }
 
-        private bool LoadConfig(string configPath, string profileName)
+        private void LoadConfig(string configPath, string profileName)
         {
             try
             {
+                string[] lines;
+                bool needApply = true;
+
                 if (!File.Exists(configPath))
                 {
-                    string backupPath = GetBackupPath(profileName);
                     string defaultContent = ReadCurrentECConfig();
-                    if (!File.Exists(backupPath))
-                    {
-                        Debug.WriteLine($"backupPath: {Path.GetDirectoryName(backupPath)}");
-                        Directory.CreateDirectory(Path.GetDirectoryName(backupPath));
-                        File.WriteAllText(backupPath, defaultContent);
-                    }
-
-                    var defaultLines = defaultContent.Split(new[] { Environment.NewLine }, StringSplitOptions.RemoveEmptyEntries);
-                    currentConfig = ParseConfig(defaultLines);
-                    LoadCurvePointsFromConfig();
-                    UpdateDeviceSelector();
-                    return false;
+                    lines = defaultContent.Split(new[] { Environment.NewLine }, StringSplitOptions.RemoveEmptyEntries);
+                    needApply = false;
                 }
-
-                var lines = File.ReadAllLines(configPath)
-                    .Where(line => !string.IsNullOrWhiteSpace(line))
-                    .ToArray();
+                else
+                {
+                    lines = File.ReadAllLines(configPath)
+                        .Where(line => !string.IsNullOrWhiteSpace(line))
+                        .ToArray();
+                }
 
                 currentConfig = ParseConfig(lines);
                 LoadCurvePointsFromConfig();
                 UpdateDeviceSelector();
-                return true;
+                if (needApply)
+                    ApplyFanCurveToEC();
             }
             catch (Exception ex)
             {
                 _ = ShowDialogSafeAsync("Config Error", $"Failed to load config: {ex.Message}");
                 currentConfig = CreateDefaultConfig();
-                return false;
                 //InitializeCurvePoints(5);
                 //UpdateDeviceSelector();
             }
@@ -1159,7 +1091,15 @@ hst_temps_ramp_down : 28 48 53 63 68";
                 if (cpuCurvePoints[i].Temp <= cpuCurvePoints[i - 1].Temp) return;
             }
 
-            int legionGen = currentConfig.LegionGeneration;
+            string backupPath = GetBackupPath();
+            if (!File.Exists(backupPath))
+            {
+                string defaultContent = ReadCurrentECConfig();
+                Debug.WriteLine($"backupPath: {Path.GetDirectoryName(backupPath)}");
+                Directory.CreateDirectory(Path.GetDirectoryName(backupPath));
+                File.WriteAllText(backupPath, defaultContent);
+            }
+
             byte acclValue = (byte)Math.Clamp(AccVal.Value, 1, 15);
             byte declValue = (byte)Math.Clamp(DecVal.Value, 1, 15);
 
@@ -1171,7 +1111,7 @@ hst_temps_ramp_down : 28 48 53 63 68";
             byte[] gpuRampUp = gpuCurvePoints.Select(p => (byte)Math.Clamp(p.Temp, 0, 255)).ToArray();
             byte[] gpuRampDown = gpuCurvePoints.Select(p => (byte)Math.Clamp(Math.Max(0, p.Temp - currentConfig.Hysteresis), 0, 255)).ToArray();
 
-            ECWriter.WriteFanAcclDeccl(legionGen, acclValue, declValue);
+            ECWriter.WriteFanAcclDeccl(legionGeneration, acclValue, declValue);
             ECWriter.WriteFanPointCount();
             ECWriter.WriteFanRpmPoints(rpmPoints);
             ECWriter.WriteTemperatureRamp(cpuRampUp, cpuRampDown,
@@ -1195,11 +1135,21 @@ hst_temps_ramp_down : 28 48 53 63 68";
             ECWriter.WriteFanTableChangeCounter(0x64);
         }
 
+        private void ApplyConfigToUI(FanConfig config)
+        {
+            currentConfig = config;
+            LoadCurvePointsFromConfig();
+            UpdateDeviceSelector();
+
+            AccVal.Value = config.AccelerationValue;
+            DecVal.Value = config.DecelerationValue;
+        }
+
         private async void LoadSuggestedConfig_Click(object sender, RoutedEventArgs e)
         {
             if (sender is Button btn && btn.Tag is string mode)
             {
-                if (LoadSuggestedBtn.Flyout is Flyout flyout)
+                if (LoadProfileBtn.Flyout is Flyout flyout)
                 {
                     flyout.Hide();
                 }
@@ -1234,33 +1184,7 @@ hst_temps_ramp_down : 28 48 53 63 68";
 
                     var suggestedConfig = ParseConfig(lines);
 
-                    // Apply to current editing curve
-                    currentConfig.Hysteresis = suggestedConfig.Hysteresis;
-                    currentConfig.AccelerationValue = suggestedConfig.AccelerationValue;
-                    currentConfig.DecelerationValue = suggestedConfig.DecelerationValue;
-
-                    // Load curve points
-                    int pointCount = suggestedConfig.CpuTempsRampUp.Length;
-                    cpuCurvePoints.Clear();
-                    gpuCurvePoints.Clear();
-
-                    for (int i = 0; i < pointCount; i++)
-                    {
-                        int cpuTemp = Math.Clamp(suggestedConfig.CpuTempsRampUp[i], MIN_TEMP, MAX_TEMP);
-                        int gpuTemp = Math.Clamp(suggestedConfig.GpuTempsRampUp[i], MIN_TEMP, MAX_TEMP);
-                        int rpm = Math.Clamp(suggestedConfig.FanRpmPoints[i], MIN_RPM, MAX_RPM);
-
-                        cpuCurvePoints.Add(new CurvePoint { Temp = cpuTemp, Rpm = rpm });
-                        gpuCurvePoints.Add(new CurvePoint { Temp = gpuTemp, Rpm = rpm });
-                    }
-
-                    // Update UI
-                    AccVal.Value = suggestedConfig.AccelerationValue;
-                    DecVal.Value = suggestedConfig.DecelerationValue;
-
-                    UpdatePointCountText();
-                    UpdateDeviceSelector();
-                    DrawFanCurve();
+                    ApplyConfigToUI(suggestedConfig);
 
                     await ShowDialogSafeAsync("Config Loaded",
                         $"Suggested {mode} configuration loaded.\n\nClick Save to apply to EC.");
@@ -1270,6 +1194,90 @@ hst_temps_ramp_down : 28 48 53 63 68";
                     await ShowDialogSafeAsync("Error", $"Failed to load suggested config: {ex.Message}");
                 }
             }
+        }
+
+
+        [DllImport("comdlg32.dll", CharSet = CharSet.Auto, SetLastError = true)]
+        private static extern bool GetOpenFileName(ref OPENFILENAME lpofn);
+
+        [StructLayout(LayoutKind.Sequential, CharSet = CharSet.Auto)]
+        private struct OPENFILENAME
+        {
+            public int lStructSize;
+            public IntPtr hwndOwner;
+            public IntPtr hInstance;
+            public string lpstrFilter;
+            public string lpstrCustomFilter;
+            public int nMaxCustFilter;
+            public int nFilterIndex;
+            public string lpstrFile;
+            public int nMaxFile;
+            public string lpstrFileTitle;
+            public int nMaxFileTitle;
+            public string lpstrInitialDir;
+            public string lpstrTitle;
+            public int Flags;
+            public short nFileOffset;
+            public short nFileExtension;
+            public string lpstrDefExt;
+            public IntPtr lCustData;
+            public IntPtr lpfnHook;
+            public string lpstrTemplateName;
+            public IntPtr pvReserved;
+            public int dwReserved;
+            public int flagsEx;
+        }
+
+        private async void LoadCustomConfig_Click(object sender, RoutedEventArgs e)
+        {
+            if (LoadProfileBtn.Flyout is Flyout flyout)
+                flyout.Hide();
+
+            var ofn = new OPENFILENAME();
+            ofn.lStructSize = Marshal.SizeOf(typeof(OPENFILENAME));
+            ofn.hwndOwner = WinRT.Interop.WindowNative.GetWindowHandle(this);
+            ofn.lpstrFilter = "Text files\0*.txt\0All files\0*.*\0";
+            ofn.lpstrFile = new string(new char[2048]);
+            ofn.nMaxFile = ofn.lpstrFile.Length;
+            ofn.lpstrFileTitle = new string(new char[256]);
+            ofn.nMaxFileTitle = 256;
+            ofn.lpstrTitle = "Select Config File";
+            ofn.Flags = 0x00080000;
+
+            if (!GetOpenFileName(ref ofn)) return;
+
+            string path = ofn.lpstrFile.TrimEnd('\0');
+
+            var lines = File.ReadAllLines(path)
+                .Where(line => !string.IsNullOrWhiteSpace(line))
+                .ToArray();
+
+            var config = ParseConfig(lines);
+
+            // Check generation mismatch
+
+            if (config.LegionGeneration != legionGeneration)
+            {
+                var warnResult = await ShowConfirmationDialogAsync("Generation Mismatch",
+                    $"Warning: The loaded config is for Gen{config.LegionGeneration}, " +
+                    $"but your device is detected as Gen{legionGeneration}.\n\n" +
+                    $"Applying this config may cause unexpected fan behavior.\n\n" +
+                    $"Continue anyway?");
+
+                if (warnResult != ContentDialogResult.Primary) return;
+            }
+
+            var result = await ShowConfirmationDialogAsync("Load Custom Config",
+                $"Load configuration from:\n{Path.GetFileName(path)}\n\n" +
+                $"Legion Gen: {config.LegionGeneration}\n" +
+                $"Curve Points: {config.FanCurvePoints}");
+
+            if (result != ContentDialogResult.Primary) return;
+
+            ApplyConfigToUI(config);
+
+            await ShowDialogSafeAsync("Config Loaded",
+                $"Configuration loaded from:\n{Path.GetFileName(path)}\n\nClick Save to apply to EC.");
         }
 
         private async Task<ContentDialogResult> ShowConfirmationDialogAsync(string title, string message)
@@ -1299,17 +1307,13 @@ hst_temps_ramp_down : 28 48 53 63 68";
                 currentConfig.FanRpmPoints = cpuCurvePoints.Select(p => p.Rpm).ToArray();
                 currentConfig.CpuTempsRampUp = cpuCurvePoints.Select(p => p.Temp).ToArray();
                 currentConfig.GpuTempsRampUp = gpuCurvePoints.Select(p => p.Temp).ToArray();
+                ApplyFanCurveToEC();
 
-                string configPath = currentProfile switch
-                {
-                    "performance" => App.PerformanceConfigPath,
-                    "quiet" => App.QuietConfigPath,
-                    _ => App.BalancedConfigPath
-                };
+                string configPath = GetConfigPath(currentProfile);
 
                 string configContent = GenerateConfigContent();
                 File.WriteAllText(configPath, configContent);
-                ApplyFanCurveToEC();
+                
                 ShowSuccessDialog("Configuration saved", "");
             }
             catch (Exception ex)
@@ -1386,7 +1390,7 @@ hst_temps_ramp_down : 28 43 53 63 68 73 78 83 85";
             int[] cpuRampDown = currentConfig.CpuTempsRampUp.Select(t => Math.Max(0, t - h)).ToArray();
             int[] gpuRampDown = currentConfig.GpuTempsRampUp.Select(t => Math.Max(0, t - h)).ToArray();
 
-            return $@"legion_gen : {currentConfig.LegionGeneration}
+            return $@"legion_gen : {legionGeneration}
 fan_curve_points : {currentConfig.FanCurvePoints}
 fan_accl_value : {currentConfig.AccelerationValue}
 fan_deccl_value : {currentConfig.DecelerationValue}
@@ -1402,11 +1406,11 @@ hst_temps_ramp_down : {string.Join(" ", gpuRampDown)}";
 
         private void UpdateDeviceSelector()
         {
-            if (DeviceSelector == null || currentConfig == null) return;
+            if (DeviceSelector == null) return;
 
             try
             {
-                DeviceSelector.SelectedIndex = currentConfig.LegionGeneration == 5 ? 0 : 1;
+                DeviceSelector.SelectedIndex = legionGeneration == 5 ? 0 : 1;
             }
             catch (Exception ex)
             {
@@ -2223,7 +2227,7 @@ hst_temps_ramp_down : {string.Join(" ", gpuRampDown)}";
                 try
                 {
                     // Wait for system to apply default EC curve for this mode, then override with user config
-                    bool success = await PowerModeHelper.SetPowerModeAndWaitAsync(powerMode, currentConfig.LegionGeneration);
+                    bool success = await PowerModeHelper.SetPowerModeAndWaitAsync(powerMode, legionGeneration);
 
                     if (!success)
                     {
@@ -2237,15 +2241,9 @@ hst_temps_ramp_down : {string.Join(" ", gpuRampDown)}";
                     }
 
                     currentProfile = newProfile;
-                    string configPath = newProfile switch
-                    {
-                        "performance" => App.PerformanceConfigPath,
-                        "quiet" => App.QuietConfigPath,
-                        _ => App.BalancedConfigPath
-                    };
+                    string configPath = GetConfigPath(currentProfile);
 
-                    if (LoadConfig(configPath, newProfile))
-                        ApplyFanCurveToEC();
+                    LoadConfig(configPath, newProfile);
                     SetActiveProfileButton(newProfile);
                 }
                 finally
@@ -2267,7 +2265,8 @@ hst_temps_ramp_down : {string.Join(" ", gpuRampDown)}";
         {
             if (DeviceSelector.SelectedItem is ComboBoxItem selectedItem && currentConfig != null)
             {
-                currentConfig.LegionGeneration = selectedItem.Content.ToString().Contains("5th") ? 5 : 6;
+                legionGeneration = selectedItem.Content.ToString().Contains("5th") ? 5 : 6;
+                SettingsManager.LegionGeneration = legionGeneration;
             }
         }
 
@@ -2300,7 +2299,7 @@ hst_temps_ramp_down : {string.Join(" ", gpuRampDown)}";
 
         private void RestoreDefaultConfig()
         {
-            string backupPath = GetBackupPath(currentProfile);
+            string backupPath = GetBackupPath();
 
             if (!File.Exists(backupPath))
             {

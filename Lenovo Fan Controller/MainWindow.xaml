@@ -267,9 +267,9 @@
                         </Button.Flyout>
                     </Button>
 
-                    <Button x:Name="LoadSuggestedBtn"
+                    <Button x:Name="LoadProfileBtn"
                         Grid.Column="1"
-                        Content="Load Suggested"
+                        Content="Load Profile"
                         HorizontalAlignment="Right"
                         CornerRadius="4"
                         Padding="24,10"
@@ -281,6 +281,11 @@
                                     <Button x:Name="LoadSuggestedBalancedBtn" Content="Balanced Mode" Click="LoadSuggestedConfig_Click" Tag="balanced"/>
                                     <Button x:Name="LoadSuggestedPerformanceBtn" Content="Performance Mode" Click="LoadSuggestedConfig_Click" Tag="performance"/>
                                     <Button x:Name="LoadSuggestedQuietBtn" Content="Quiet Mode" Click="LoadSuggestedConfig_Click" Tag="quiet"/>
+
+                                    <Border Height="1" Background="{ThemeResource DividerStrokeColorDefaultBrush}" Margin="0,8"/>
+
+                                    <TextBlock Text="Custom" FontWeight="SemiBold" FontSize="12" Margin="0,0,0,4"/>
+                                    <Button x:Name="LoadCustomConfigBtn" Content="Browse for config file..." Click="LoadCustomConfig_Click" Padding="12,6"/>
                                 </StackPanel>
                             </Flyout>
                         </Button.Flyout>
