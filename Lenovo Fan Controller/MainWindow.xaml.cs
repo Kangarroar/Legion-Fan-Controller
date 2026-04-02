@@ -630,6 +630,111 @@ namespace Lenovo_Fan_Controller
             {
                 await Task.Delay(1000);
             }
+
+            var stackPanel = new StackPanel { Spacing = 12 };
+
+            stackPanel.Children.Add(new TextBlock
+            {
+                Text = "PawnIO driver is not installed or failed to initialize.\n\n" +
+                       "Would you like to install it automatically?",
+                TextWrapping = TextWrapping.Wrap
+            });
+
+            var infoPanel = new StackPanel { Spacing = 4 };
+            infoPanel.Children.Add(new TextBlock
+            {
+                Text = "Automatic install will:",
+                FontWeight = Microsoft.UI.Text.FontWeights.SemiBold
+            });
+            infoPanel.Children.Add(new TextBlock { Text = "• Download & Run PawnIO Setup (pawnio.eu)" });
+            infoPanel.Children.Add(new TextBlock { Text = "• Download & Extract LpcIO.bin module (GitHub)" });
+            infoPanel.Children.Add(new TextBlock { Text = "• Place module in C:\\Program Files\\PawnIO\\" });
+            stackPanel.Children.Add(infoPanel);
+
+            var dialog = new ContentDialog
+            {
+                Title = "PawnIO Driver Required",
+                Content = stackPanel,
+                PrimaryButtonText = "Automatic Install",
+                SecondaryButtonText = "Manual Steps",
+                CloseButtonText = "Exit",
+                DefaultButton = ContentDialogButton.Primary,
+                XamlRoot = this.Content?.XamlRoot
+            };
+
+            var result = await dialog.ShowAsync();
+
+            if (result == ContentDialogResult.Primary)
+            {
+                // tf???
+                await Task.Delay(500);
+                await RunAutomaticPawnIOInstall();
+            }
+            else if (result == ContentDialogResult.Secondary)
+            {
+                await Task.Delay(500);
+                await ShowManualPawnIOInstallDialog();
+            }
+            else
+            {
+                _isExiting = true;
+                this.Close();
+            }
+        }
+
+        private async Task RunAutomaticPawnIOInstall()
+        {
+            var statusText = new TextBlock
+            {
+                Text = "Preparing installation...",
+                TextWrapping = TextWrapping.Wrap,
+                Margin = new Thickness(0, 0, 0, 12)
+            };
+            var progressBar = new ProgressBar { IsIndeterminate = true };
+            var stackPanel = new StackPanel { Spacing = 8, Padding = new Thickness(0, 8, 0, 0) };
+            stackPanel.Children.Add(statusText);
+            stackPanel.Children.Add(progressBar);
+
+            var progressDialog = new ContentDialog
+            {
+                Title = "Installing PawnIO",
+                Content = stackPanel,
+                XamlRoot = this.Content?.XamlRoot
+            };
+
+            var showTask = progressDialog.ShowAsync();
+
+            string lastErrorMessage = "";
+            bool success = await PawnIOInstaller.InstallAsync(msg =>
+            {
+                if (msg.StartsWith("Error:")) lastErrorMessage = msg;
+                DispatcherQueue.TryEnqueue(() => statusText.Text = msg);
+            });
+
+            progressDialog.Hide();
+            // Wait for showTask to complete after Hide()
+            await showTask;
+
+            if (success)
+            {
+                await Task.Delay(500);
+                await ShowDialogSafeAsync("Success", "PawnIO installed successfully. Retrying initialization...");
+                _isReinitializing = true;
+                await InitializeWhenReadyAsync();
+                _isReinitializing = false;
+            }
+            else
+            {
+                await Task.Delay(500);
+                await ShowDialogSafeAsync("Installation Failed",
+                    $"Automatic installation failed.\n\n{lastErrorMessage}\n\nPlease try manual installation.");
+                await Task.Delay(500);
+                await ShowManualPawnIOInstallDialog();
+            }
+        }
+
+        private async Task ShowManualPawnIOInstallDialog()
+        {
             var stackPanel = new StackPanel { Spacing = 8 };
 
             stackPanel.Children.Add(new TextBlock
@@ -695,7 +800,7 @@ namespace Lenovo_Fan_Controller
 
             var dialog = new ContentDialog
             {
-                Title = "PawnIO Driver Required",
+                Title = "Manual Install Steps",
                 Content = stackPanel,
                 PrimaryButtonText = "Retry",
                 CloseButtonText = "Exit",
@@ -1126,11 +1231,12 @@ hst_temps_ramp_down : 28 48 53 63 68";
                 ECWriter.WriteTemperatureRamp(hstRampUp, hstRampDown,
                     (ushort)ECWriteRegisters.HST_RAMP_UP, (ushort)ECWriteRegisters.HST_RAMP_DOWN);
             }
-            else {
+            else
+            {
                 ECWriter.WriteTemperatureRamp(gpuRampUp, gpuRampDown,
                     (ushort)ECWriteRegisters.HST_RAMP_UP, (ushort)ECWriteRegisters.HST_RAMP_DOWN);
             }
-            
+
             ECWriter.WriteStopRgbFanWake();
             ECWriter.WriteFanTableChangeCounter(0x64);
         }
@@ -1313,7 +1419,7 @@ hst_temps_ramp_down : 28 48 53 63 68";
 
                 string configContent = GenerateConfigContent();
                 File.WriteAllText(configPath, configContent);
-                
+
                 ShowSuccessDialog("Configuration saved", "");
             }
             catch (Exception ex)
