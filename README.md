@@ -19,6 +19,7 @@ Based on and forked from [LegionGen5-6FanControl_WinRing_Smokeless_I-OPortsMetho
 * Lenovo Legion 5/6 series laptop
 * Administrator privileges
 * .NET 6.0 Desktop Runtime
+* PawnIO 
 
 ---
 
@@ -27,29 +28,10 @@ Based on and forked from [LegionGen5-6FanControl_WinRing_Smokeless_I-OPortsMetho
 1. Download the latest release from the [Releases page](https://github.com/Kangarroar/Legion-5-6-Fan-Controller/releases)
 2. Extract the ZIP file
 3. Right-click `LenovoFanController.exe` → **Run as administrator**
+4. Follow the setup steps shown for PawnIO
 
 You may check the [Wiki](https://github.com/Kangarroar/Legion-Fan-Controller/wiki) for more info.
 > Use at your own risk.
-
----
-
-## Windows Defender (WinRing0)
-
-This application uses **WinRing0** for low-level hardware access.
-Windows Defender may flag `WinRing0x64.sys` as:
-
-> Trojan/VulnerableDriver:WinNT/WinRing0
-
-This is expected behavior due to the nature of the driver.
-
-Microsoft explanation:
-[https://support.microsoft.com/en-us/windows/microsoft-defender-antivirus-alert-vulnerabledriver-winnt-winring0-eb057830-d77b-41a2-9a34-015a5d203c42](https://support.microsoft.com/en-us/windows/microsoft-defender-antivirus-alert-vulnerabledriver-winnt-winring0-eb057830-d77b-41a2-9a34-015a5d203c42)
-
-If blocked:
-
-* Manually allow it in Windows Security
-  **or**
-* Run `AddDefenderExclusion.bat` as Administrator to automatically add the exclusion
 
 ---
 
