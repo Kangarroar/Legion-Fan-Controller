@@ -23,8 +23,8 @@ namespace Lenovo_Fan_Controller
         public const bool DefaultEnableSafeguards = true;
         public const bool DefaultAllowResizing = false;
 
-        public const int NormalMaxRpm = 4500;
-        public const int UnlockedMaxRpm = 5000;
+        public const int NormalMaxRpm = 6000;
+        public const int UnlockedMaxRpm = 6800;
 
         /// <summary>
         ///////////////////////////////////
