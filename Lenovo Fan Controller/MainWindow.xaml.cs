@@ -129,7 +129,7 @@ namespace Lenovo_Fan_Controller
         {
             if (PointCountText != null)
             {
-                PointCountText.Text = $"Current: {cpuCurvePoints.Count} points";
+                PointCountText.Text = $"当前：{cpuCurvePoints.Count} 个节点";
             }
         }
 
@@ -344,7 +344,7 @@ namespace Lenovo_Fan_Controller
         private void ContextMenu_Opening(object sender, object e)
         {
             CheckStartupStatus();
-            ShowHideMenuItem.Text = _isWindowVisible ? "Hide Window" : "Show Window";
+            ShowHideMenuItem.Text = _isWindowVisible ? "隐藏窗口" : "显示窗口";
         }
 
         private void ShowHideMenuItem_Click(object sender, RoutedEventArgs e)
@@ -362,15 +362,15 @@ namespace Lenovo_Fan_Controller
                     success = StartupManager.EnableStartup();
                     if (success)
                     {
-                        await ShowDialogSafeAsync("Startup Enabled",
-                            "Legion Fan Controller will now start automatically when Windows boots.\n\n" +
-                            "You can disable this anytime from the tray icon menu or Task Manager's Startup tab.");
+                        await ShowDialogSafeAsync("已启用开机启动",
+                            "拯救者风扇控制器将在 Windows 启动时自动运行。\n\n" +
+                            "你可以随时从托盘图标菜单或任务管理器的“启动应用”页面关闭此功能。");
                     }
                     else
                     {
                         StartupMenuItem.IsChecked = false;
-                        await ShowDialogSafeAsync("Error",
-                            "Failed to enable startup. Please make sure the application is running as Administrator.");
+                        await ShowDialogSafeAsync("错误",
+                            "无法启用开机启动。请确认本程序正以管理员身份运行。");
                     }
                 }
                 else
@@ -378,20 +378,20 @@ namespace Lenovo_Fan_Controller
                     success = StartupManager.DisableStartup();
                     if (success)
                     {
-                        await ShowDialogSafeAsync("Startup Disabled",
-                            "Legion Fan Controller will no longer start automatically with Windows.");
+                        await ShowDialogSafeAsync("已关闭开机启动",
+                            "拯救者风扇控制器将不再随 Windows 自动启动。");
                     }
                     else
                     {
                         StartupMenuItem.IsChecked = true;
-                        await ShowDialogSafeAsync("Error",
-                            "Failed to disable startup. Please make sure the application is running as Administrator.");
+                        await ShowDialogSafeAsync("错误",
+                            "无法关闭开机启动。请确认本程序正以管理员身份运行。");
                     }
                 }
             }
             catch (Exception ex)
             {
-                await ShowDialogSafeAsync("Error", $"Failed to change startup setting: {ex.Message}");
+                await ShowDialogSafeAsync("错误", $"更改开机启动设置失败：{ex.Message}");
                 CheckStartupStatus();
             }
         }
@@ -411,7 +411,7 @@ namespace Lenovo_Fan_Controller
         {
             var startMinimizedCheckBox = new CheckBox
             {
-                Content = "Start Minimized to Tray",
+                Content = "启动后最小化到托盘",
                 IsChecked = SettingsManager.GetStartMinimized(),
                 Margin = new Thickness(0, 0, 0, 12),
                 Opacity = 1
@@ -419,7 +419,7 @@ namespace Lenovo_Fan_Controller
 
             var unlockMaxRpmCheckBox = new CheckBox
             {
-                Content = "Unlock Max RPM ⚠️",
+                Content = "解锁最高转速 ⚠️",
                 IsChecked = SettingsManager.GetUnlockMaxRpm(),
                 Margin = new Thickness(0, 0, 0, 4),
                 Foreground = new SolidColorBrush(Microsoft.UI.Colors.OrangeRed)
@@ -428,28 +428,28 @@ namespace Lenovo_Fan_Controller
 
             var lockPointsCheckBox = new CheckBox
             {
-                Content = "Lock Fan Curve Points (Prevent Add/Remove)",
+                Content = "锁定风扇曲线节点（禁止添加/删除）",
                 IsChecked = SettingsManager.GetLockPoints(),
                 Margin = new Thickness(0, 0, 0, 12)
             };
 
             var enableSafeguardsCheckBox = new CheckBox
             {
-                Content = "Enable Safeguards",
+                Content = "启用安全保护",
                 IsChecked = SettingsManager.GetEnableSafeguards(),
                 Margin = new Thickness(0, 0, 0, 12)
             };
 
             var allowResizingCheckBox = new CheckBox
             {
-                Content = "Allow Window Resizing",
+                Content = "允许调整窗口大小",
                 IsChecked = SettingsManager.GetAllowResizing(),
                 Margin = new Thickness(0, 0, 0, 12)
             };
 
             var hysteresisLabel = new TextBlock
             {
-                Text = "Temperature Hysteresis (Ramp Down Offset):",
+                Text = "温度回差（降速偏移）：",
                 Margin = new Thickness(0, 8, 0, 4),
                 FontWeight = Microsoft.UI.Text.FontWeights.SemiBold
             };
@@ -460,7 +460,7 @@ namespace Lenovo_Fan_Controller
                 Minimum = 1,
                 Maximum = 8,
                 SpinButtonPlacementMode = NumberBoxSpinButtonPlacementMode.Compact,
-                Header = "Offset in °C (Default is 3)"
+                Header = "偏移温度（°C，默认为 3）"
             };
 
             var stackPanel = new StackPanel
@@ -480,10 +480,10 @@ namespace Lenovo_Fan_Controller
 
             var dialog = new ContentDialog
             {
-                Title = "Settings",
+                Title = "设置",
                 Content = stackPanel,
-                PrimaryButtonText = "Save",
-                CloseButtonText = "Cancel",
+                PrimaryButtonText = "保存",
+                CloseButtonText = "取消",
                 DefaultButton = ContentDialogButton.Primary,
                 XamlRoot = this.Content?.XamlRoot
             };
@@ -578,7 +578,7 @@ namespace Lenovo_Fan_Controller
         {
             _isWindowVisible = false;
             _monitoringTimer?.Stop();
-            ShowHideMenuItem.Text = "Show Window";
+            ShowHideMenuItem.Text = "显示窗口";
 
             var hWnd = WindowNative.GetWindowHandle(this);
             User32.ShowWindow(hWnd, User32.SW_HIDE);
@@ -587,7 +587,7 @@ namespace Lenovo_Fan_Controller
         private void ShowWindow()
         {
             _isWindowVisible = true;
-            ShowHideMenuItem.Text = "Hide Window";
+            ShowHideMenuItem.Text = "隐藏窗口";
 
             var hWnd = WindowNative.GetWindowHandle(this);
             IntPtr currentWndProc = GetWindowLongPtr(hWnd, GWLP_WNDPROC);
@@ -639,29 +639,29 @@ namespace Lenovo_Fan_Controller
 
             stackPanel.Children.Add(new TextBlock
             {
-                Text = "PawnIO driver is not installed or failed to initialize.\n\n" +
-                       "Would you like to install it automatically?",
+                Text = "PawnIO 驱动尚未安装或初始化失败。\n\n" +
+                       "是否要自动安装？",
                 TextWrapping = TextWrapping.Wrap
             });
 
             var infoPanel = new StackPanel { Spacing = 4 };
             infoPanel.Children.Add(new TextBlock
             {
-                Text = "Automatic install will:",
+                Text = "自动安装将执行以下操作：",
                 FontWeight = Microsoft.UI.Text.FontWeights.SemiBold
             });
-            infoPanel.Children.Add(new TextBlock { Text = "• Download & Run PawnIO Setup (pawnio.eu)" });
-            infoPanel.Children.Add(new TextBlock { Text = "• Download & Extract LpcIO.bin module (GitHub)" });
-            infoPanel.Children.Add(new TextBlock { Text = "• Place module in C:\\Program Files\\PawnIO\\" });
+            infoPanel.Children.Add(new TextBlock { Text = "• 下载并运行 PawnIO 安装程序（pawnio.eu）" });
+            infoPanel.Children.Add(new TextBlock { Text = "• 下载并解压 LpcIO.bin 模块（GitHub）" });
+            infoPanel.Children.Add(new TextBlock { Text = "• 将模块放入 C:\\Program Files\\PawnIO\\" });
             stackPanel.Children.Add(infoPanel);
 
             var dialog = new ContentDialog
             {
-                Title = "PawnIO Driver Required",
+                Title = "需要 PawnIO 驱动",
                 Content = stackPanel,
-                PrimaryButtonText = "Automatic Install",
-                SecondaryButtonText = "Manual Steps",
-                CloseButtonText = "Exit",
+                PrimaryButtonText = "自动安装",
+                SecondaryButtonText = "手动步骤",
+                CloseButtonText = "退出",
                 DefaultButton = ContentDialogButton.Primary,
                 XamlRoot = this.Content?.XamlRoot
             };
@@ -690,7 +690,7 @@ namespace Lenovo_Fan_Controller
         {
             var statusText = new TextBlock
             {
-                Text = "Preparing installation...",
+                Text = "正在准备安装…",
                 TextWrapping = TextWrapping.Wrap,
                 Margin = new Thickness(0, 0, 0, 12)
             };
@@ -701,7 +701,7 @@ namespace Lenovo_Fan_Controller
 
             var progressDialog = new ContentDialog
             {
-                Title = "Installing PawnIO",
+                Title = "正在安装 PawnIO",
                 Content = stackPanel,
                 XamlRoot = this.Content?.XamlRoot
             };
@@ -711,7 +711,7 @@ namespace Lenovo_Fan_Controller
             string lastErrorMessage = "";
             bool success = await PawnIOInstaller.InstallAsync(msg =>
             {
-                if (msg.StartsWith("Error:")) lastErrorMessage = msg;
+                if (msg.StartsWith("错误：")) lastErrorMessage = msg;
                 DispatcherQueue.TryEnqueue(() => statusText.Text = msg);
             });
 
@@ -722,7 +722,7 @@ namespace Lenovo_Fan_Controller
             if (success)
             {
                 await Task.Delay(500);
-                await ShowDialogSafeAsync("Success", "PawnIO installed successfully. Retrying initialization...");
+                await ShowDialogSafeAsync("成功", "PawnIO 安装成功，正在重新初始化…");
                 _isReinitializing = true;
                 await InitializeWhenReadyAsync();
                 _isReinitializing = false;
@@ -730,8 +730,8 @@ namespace Lenovo_Fan_Controller
             else
             {
                 await Task.Delay(500);
-                await ShowDialogSafeAsync("Installation Failed",
-                    $"Automatic installation failed.\n\n{lastErrorMessage}\n\nPlease try manual installation.");
+                await ShowDialogSafeAsync("安装失败",
+                    $"自动安装失败。\n\n{lastErrorMessage}\n\n请尝试手动安装。");
                 await Task.Delay(500);
                 await ShowManualPawnIOInstallDialog();
             }
@@ -743,8 +743,8 @@ namespace Lenovo_Fan_Controller
 
             stackPanel.Children.Add(new TextBlock
             {
-                Text = "PawnIO driver is not installed or failed to initialize.\n\n" +
-                       "Please follow these steps:",
+                Text = "PawnIO 驱动尚未安装或初始化失败。\n\n" +
+                       "请按以下步骤操作：",
                 TextWrapping = TextWrapping.Wrap
             });
 
@@ -752,39 +752,39 @@ namespace Lenovo_Fan_Controller
 
             installPanel.Children.Add(new HyperlinkButton
             {
-                Content = "Download PawnIO.Setup from pawnio.eu",
+                Content = "从 pawnio.eu 下载 PawnIO.Setup",
                 NavigateUri = new Uri("https://pawnio.eu")
             });
 
             installPanel.Children.Add(new HyperlinkButton
             {
-                Content = "Download from Github (alternative)",
+                Content = "从 GitHub 下载（备用）",
                 NavigateUri = new Uri("https://github.com/namazso/PawnIO.Setup/releases")
             });
 
             stackPanel.Children.Add(new TextBlock
             {
-                Text = "1. Install PawnIO driver:",
+                Text = "1. 安装 PawnIO 驱动：",
                 FontWeight = Microsoft.UI.Text.FontWeights.SemiBold
             });
             stackPanel.Children.Add(installPanel);
 
             stackPanel.Children.Add(new TextBlock
             {
-                Text = "2. Download modules:",
+                Text = "2. 下载模块：",
                 FontWeight = Microsoft.UI.Text.FontWeights.SemiBold,
                 Margin = new Thickness(0, 12, 0, 0)
             });
             stackPanel.Children.Add(new HyperlinkButton
             {
-                Content = "Download PawnIO.Modules from Github",
+                Content = "从 GitHub 下载 PawnIO.Modules",
                 NavigateUri = new Uri("https://github.com/namazso/PawnIO.Modules/releases"),
                 Margin = new Thickness(0, 4, 0, 0)
             });
 
             stackPanel.Children.Add(new TextBlock
             {
-                Text = "3. Extract LpcIO.bin to:",
+                Text = "3. 将 LpcIO.bin 解压到：",
                 FontWeight = Microsoft.UI.Text.FontWeights.SemiBold,
                 Margin = new Thickness(0, 12, 0, 4)
             });
@@ -797,17 +797,17 @@ namespace Lenovo_Fan_Controller
 
             stackPanel.Children.Add(new TextBlock
             {
-                Text = "⚠️ Run as Administrator",
+                Text = "⚠️ 请以管理员身份运行",
                 Foreground = new SolidColorBrush(Microsoft.UI.Colors.Orange),
                 Margin = new Thickness(0, 16, 0, 0)
             });
 
             var dialog = new ContentDialog
             {
-                Title = "Manual Install Steps",
+                Title = "手动安装步骤",
                 Content = stackPanel,
-                PrimaryButtonText = "Retry",
-                CloseButtonText = "Exit",
+                PrimaryButtonText = "重试",
+                CloseButtonText = "退出",
                 DefaultButton = ContentDialogButton.Primary,
                 XamlRoot = this.Content?.XamlRoot
             };
@@ -868,8 +868,8 @@ namespace Lenovo_Fan_Controller
             }
             catch (Exception ex)
             {
-                await ShowDialogSafeAsync("Initialization Error",
-                    $"Failed to detect power mode: {ex.Message}");
+                await ShowDialogSafeAsync("初始化错误",
+                    $"无法检测电源模式：{ex.Message}");
                 LoadConfig(App.BalancedConfigPath, "balance");
             }
 
@@ -1017,6 +1017,16 @@ namespace Lenovo_Fan_Controller
             };
         }
 
+        private static string GetProfileDisplayName(string profile)
+        {
+            return profile switch
+            {
+                "performance" => "性能",
+                "quiet" => "安静",
+                _ => "均衡"
+            };
+        }
+
         private void SetActiveProfileButton(string profile)
         {
             var accentStyle = Application.Current.Resources["AccentButtonStyle"] as Style;
@@ -1067,7 +1077,7 @@ namespace Lenovo_Fan_Controller
                     {
                         Title = title,
                         Content = message,
-                        CloseButtonText = "OK",
+                        CloseButtonText = "确定",
                         XamlRoot = _xamlRoot ?? this.Content?.XamlRoot
                     };
 
@@ -1201,7 +1211,7 @@ hst_temps_ramp_down : {string.Join(" ", hstRampDown)}";
             }
             catch (Exception ex)
             {
-                _ = ShowDialogSafeAsync("Config Error", $"Failed to load config: {ex.Message}");
+                _ = ShowDialogSafeAsync("配置错误", $"加载配置失败：{ex.Message}");
                 currentConfig = CreateDefaultConfig();
                 //InitializeCurvePoints(5);
                 //UpdateDeviceSelector();
@@ -1423,15 +1433,15 @@ hst_temps_ramp_down : 28 48 53 63 68";
 
                 if (!File.Exists(suggestedPath))
                 {
-                    await ShowDialogSafeAsync("Suggested Config Not Found",
-                        $"Suggested configuration for {mode} mode not found.\n\n" +
-                        $"Please place the file at:\n{suggestedPath}");
+                    await ShowDialogSafeAsync("未找到建议配置",
+                        $"未找到{GetProfileDisplayName(mode)}模式的建议配置。\n\n" +
+                        $"请将文件放置在：\n{suggestedPath}");
                     return;
                 }
 
-                var result = await ShowConfirmationDialogAsync("Load Suggested Config",
-                    $"Load suggested configuration for {mode} mode?\n\n" +
-                    "This will replace your current curve settings. You can save your current settings first if needed.");
+                var result = await ShowConfirmationDialogAsync("加载建议配置",
+                    $"是否加载{GetProfileDisplayName(mode)}模式的建议配置？\n\n" +
+                    "这将替换当前的曲线设置。如有需要，请先保存当前设置。");
 
                 if (result != ContentDialogResult.Primary)
                     return;
@@ -1446,12 +1456,12 @@ hst_temps_ramp_down : 28 48 53 63 68";
 
                     ApplyConfigToUI(suggestedConfig);
 
-                    await ShowDialogSafeAsync("Config Loaded",
-                        $"Suggested {mode} configuration loaded.\n\nClick Save to apply to EC.");
+                    await ShowDialogSafeAsync("配置已加载",
+                        $"已加载{GetProfileDisplayName(mode)}模式的建议配置。\n\n单击“保存配置”以应用到 EC。");
                 }
                 catch (Exception ex)
                 {
-                    await ShowDialogSafeAsync("Error", $"Failed to load suggested config: {ex.Message}");
+                    await ShowDialogSafeAsync("错误", $"加载建议配置失败：{ex.Message}");
                 }
             }
         }
@@ -1496,12 +1506,12 @@ hst_temps_ramp_down : 28 48 53 63 68";
             var ofn = new OPENFILENAME();
             ofn.lStructSize = Marshal.SizeOf(typeof(OPENFILENAME));
             ofn.hwndOwner = WinRT.Interop.WindowNative.GetWindowHandle(this);
-            ofn.lpstrFilter = "Text files\0*.txt\0All files\0*.*\0";
+            ofn.lpstrFilter = "文本文件\0*.txt\0所有文件\0*.*\0";
             ofn.lpstrFile = new string(new char[2048]);
             ofn.nMaxFile = ofn.lpstrFile.Length;
             ofn.lpstrFileTitle = new string(new char[256]);
             ofn.nMaxFileTitle = 256;
-            ofn.lpstrTitle = "Select Config File";
+            ofn.lpstrTitle = "选择配置文件";
             ofn.Flags = 0x00080000;
 
             if (!GetOpenFileName(ref ofn)) return;
@@ -1518,26 +1528,26 @@ hst_temps_ramp_down : 28 48 53 63 68";
 
             if (config.LegionGeneration != legionGeneration)
             {
-                var warnResult = await ShowConfirmationDialogAsync("Generation Mismatch",
-                    $"Warning: The loaded config is for Gen{config.LegionGeneration}, " +
-                    $"but your device is detected as Gen{legionGeneration}.\n\n" +
-                    $"Applying this config may cause unexpected fan behavior.\n\n" +
-                    $"Continue anyway?");
+                var warnResult = await ShowConfirmationDialogAsync("设备代际不匹配",
+                    $"警告：所加载的配置适用于第 {config.LegionGeneration} 代设备，" +
+                    $"但检测到当前设备为第 {legionGeneration} 代。\n\n" +
+                    $"应用此配置可能导致风扇行为异常。\n\n" +
+                    $"仍要继续吗？");
 
                 if (warnResult != ContentDialogResult.Primary) return;
             }
 
-            var result = await ShowConfirmationDialogAsync("Load Custom Config",
-                $"Load configuration from:\n{Path.GetFileName(path)}\n\n" +
-                $"Legion Gen: {config.LegionGeneration}\n" +
-                $"Curve Points: {config.FanCurvePoints}");
+            var result = await ShowConfirmationDialogAsync("加载自定义配置",
+                $"是否从以下文件加载配置：\n{Path.GetFileName(path)}\n\n" +
+                $"设备代际：第 {config.LegionGeneration} 代\n" +
+                $"曲线节点：{config.FanCurvePoints} 个");
 
             if (result != ContentDialogResult.Primary) return;
 
             ApplyConfigToUI(config);
 
-            await ShowDialogSafeAsync("Config Loaded",
-                $"Configuration loaded from:\n{Path.GetFileName(path)}\n\nClick Save to apply to EC.");
+            await ShowDialogSafeAsync("配置已加载",
+                $"已从以下文件加载配置：\n{Path.GetFileName(path)}\n\n单击“保存配置”以应用到 EC。");
         }
 
         private async Task<ContentDialogResult> ShowConfirmationDialogAsync(string title, string message)
@@ -1546,8 +1556,8 @@ hst_temps_ramp_down : 28 48 53 63 68";
             {
                 Title = title,
                 Content = message,
-                PrimaryButtonText = "Load",
-                CloseButtonText = "Cancel",
+                PrimaryButtonText = "确认",
+                CloseButtonText = "取消",
                 DefaultButton = ContentDialogButton.Primary,
                 XamlRoot = this.Content?.XamlRoot
             };
@@ -1583,11 +1593,11 @@ hst_temps_ramp_down : 28 48 53 63 68";
                 string configContent = GenerateConfigContent();
                 File.WriteAllText(configPath, configContent);
 
-                ShowSuccessDialog("Configuration saved", "");
+                ShowSuccessDialog("配置已保存", "");
             }
             catch (Exception ex)
             {
-                ShowErrorDialog("Error Saving Config", $"Failed to save configuration: {ex.Message} ");
+                ShowErrorDialog("保存配置出错", $"保存配置失败：{ex.Message} ");
             }
         }
 
@@ -1721,11 +1731,11 @@ hst_temps_ramp_down : {string.Join(" ", currentConfig.HstTempsRampDown)}";
             {
                 if (currentEditingCurve == "cpu")
                 {
-                    CurveInfoText.Text = "Click and drag points to adjust the CPU fan curve.";
+                    CurveInfoText.Text = "单击并拖动节点以调整 CPU 风扇曲线。";
                 }
                 else
                 {
-                    CurveInfoText.Text = "Adjust GPU temperature points. RPM values mirror the CPU curve.";
+                    CurveInfoText.Text = "调整 GPU 温度节点。转速值与 CPU 曲线保持一致。";
                 }
             }
         }
@@ -1868,7 +1878,7 @@ hst_temps_ramp_down : {string.Join(" ", currentConfig.HstTempsRampDown)}";
             // Axis titles
             var xTitle = new TextBlock
             {
-                Text = "Temperature (°C)",
+                Text = "温度（°C）",
                 Foreground = textBrush,
                 FontSize = 11,
                 FontWeight = Microsoft.UI.Text.FontWeights.SemiBold
@@ -1879,7 +1889,7 @@ hst_temps_ramp_down : {string.Join(" ", currentConfig.HstTempsRampDown)}";
 
             var yTitle = new TextBlock
             {
-                Text = currentEditingCurve == "cpu" ? "Fan RPM" : "Fan RPM (mirrors CPU)",
+                Text = currentEditingCurve == "cpu" ? "风扇转速" : "风扇转速（与 CPU 一致）",
                 Foreground = textBrush,
                 FontSize = 11,
                 FontWeight = Microsoft.UI.Text.FontWeights.SemiBold
@@ -2361,7 +2371,7 @@ hst_temps_ramp_down : {string.Join(" ", currentConfig.HstTempsRampDown)}";
             var stackPanel = new StackPanel { Spacing = 12, MinWidth = 250 };
 
             // Temperature input
-            var tempLabel = new TextBlock { Text = "Temperature (°C):", FontWeight = Microsoft.UI.Text.FontWeights.SemiBold };
+            var tempLabel = new TextBlock { Text = "温度（°C）：", FontWeight = Microsoft.UI.Text.FontWeights.SemiBold };
             var tempBox = new NumberBox
             {
                 Value = point.Temp,
@@ -2373,7 +2383,7 @@ hst_temps_ramp_down : {string.Join(" ", currentConfig.HstTempsRampDown)}";
             // RPM input (only for CPU mode)
             var rpmLabel = new TextBlock
             {
-                Text = currentEditingCurve == "cpu" ? "RPM:" : "RPM (mirrors CPU):",
+                Text = currentEditingCurve == "cpu" ? "转速（RPM）：" : "转速（与 CPU 一致）：",
                 FontWeight = Microsoft.UI.Text.FontWeights.SemiBold
             };
             var rpmBox = new NumberBox
@@ -2392,10 +2402,10 @@ hst_temps_ramp_down : {string.Join(" ", currentConfig.HstTempsRampDown)}";
 
             var dialog = new ContentDialog
             {
-                Title = $"Edit Point ({currentEditingCurve.ToUpper()} Curve)",
+                Title = $"编辑{currentEditingCurve.ToUpper()}曲线节点",
                 Content = stackPanel,
-                PrimaryButtonText = "✓ Apply",
-                CloseButtonText = "✕ Cancel",
+                PrimaryButtonText = "✓ 应用",
+                CloseButtonText = "✕ 取消",
                 DefaultButton = ContentDialogButton.Primary,
                 XamlRoot = this.Content?.XamlRoot
             };
@@ -2505,11 +2515,11 @@ hst_temps_ramp_down : {string.Join(" ", currentConfig.HstTempsRampDown)}";
 
                     if (!success)
                     {
-                        await ShowDialogSafeAsync("Error",
-                            "Failed to change power mode. Please ensure:\n" +
-                            "1. You're running as Administrator\n" +
-                            "2. Lenovo Vantage/WMI services are running\n" +
-                            "3. Your model supports power mode switching");
+                        await ShowDialogSafeAsync("错误",
+                            "切换电源模式失败。请确认：\n" +
+                            "1. 程序正以管理员身份运行\n" +
+                            "2. Lenovo Vantage/WMI 服务正在运行\n" +
+                            "3. 你的机型支持切换电源模式");
 
                         return;
                     }
@@ -2539,7 +2549,9 @@ hst_temps_ramp_down : {string.Join(" ", currentConfig.HstTempsRampDown)}";
         {
             if (DeviceSelector.SelectedItem is ComboBoxItem selectedItem && currentConfig != null)
             {
-                legionGeneration = selectedItem.Content.ToString().Contains("5th") ? 5 : 6;
+                legionGeneration = int.TryParse(selectedItem.Tag?.ToString(), out int generation)
+                    ? generation
+                    : 5;
                 SettingsManager.LegionGeneration = legionGeneration;
             }
         }
@@ -2551,19 +2563,19 @@ hst_temps_ramp_down : {string.Join(" ", currentConfig.HstTempsRampDown)}";
             try
             {
                 ApplyFanCurveToEC();
-                ShowSuccessDialog("Fan Control", "Fan curve reapplied");
+                ShowSuccessDialog("风扇控制", "已重新应用风扇曲线");
             }
             catch (Exception ex)
             {
-                ShowErrorDialog("Error", $"Failed to restart service: {ex.Message}");
+                ShowErrorDialog("错误", $"重新应用风扇曲线失败：{ex.Message}");
             }
         }
 
         private async void RestoreDefaultBtn_Click(object sender, RoutedEventArgs e)
         {
-            var result = await ShowConfirmationDialogAsync("Restore Default Curve",
-                $"Restore default fan curve for {currentProfile} mode?\n\n" +
-                "This will replace your current settings and apply to EC immediately.");
+            var result = await ShowConfirmationDialogAsync("恢复默认曲线",
+                $"是否恢复{GetProfileDisplayName(currentProfile)}模式的默认风扇曲线？\n\n" +
+                "这将替换当前设置并立即应用到 EC。");
 
             if (result != ContentDialogResult.Primary)
                 return;
@@ -2577,7 +2589,7 @@ hst_temps_ramp_down : {string.Join(" ", currentConfig.HstTempsRampDown)}";
 
             if (!File.Exists(backupPath))
             {
-                ShowErrorDialog("Error", $"No backup found for {currentProfile} mode.\n\nBackup path: {backupPath}");
+                ShowErrorDialog("错误", $"未找到{GetProfileDisplayName(currentProfile)}模式的备份。\n\n备份路径：{backupPath}");
                 return;
             }
 
@@ -2597,11 +2609,11 @@ hst_temps_ramp_down : {string.Join(" ", currentConfig.HstTempsRampDown)}";
                 AccVal.Value = currentConfig.AccelerationValue;
                 DecVal.Value = currentConfig.DecelerationValue;
 
-                ShowSuccessDialog("Restored", $"Default curve for {currentProfile} mode restored.");
+                ShowSuccessDialog("已恢复", $"已恢复{GetProfileDisplayName(currentProfile)}模式的默认曲线。");
             }
             catch (Exception ex)
             {
-                ShowErrorDialog("Error", $"Failed to restore: {ex.Message}");
+                ShowErrorDialog("错误", $"恢复失败：{ex.Message}");
             }
         }
 
@@ -2609,7 +2621,7 @@ hst_temps_ramp_down : {string.Join(" ", currentConfig.HstTempsRampDown)}";
         {
             if (cpuCurvePoints.Count >= 8)
             {
-                _ = ShowDialogSafeAsync("Maximum Points Reached", "You can have a maximum of 8 points on the curve.");
+                _ = ShowDialogSafeAsync("已达到节点上限", "曲线最多可以包含 8 个节点。");
                 return;
             }
 
@@ -2642,7 +2654,7 @@ hst_temps_ramp_down : {string.Join(" ", currentConfig.HstTempsRampDown)}";
         {
             if (cpuCurvePoints.Count <= 2)
             {
-                _ = ShowDialogSafeAsync("Minimum Points Required", "You must have at least 2 points on the curve.");
+                _ = ShowDialogSafeAsync("节点数量不足", "曲线必须至少包含 2 个节点。");
                 return;
             }
 
@@ -2661,7 +2673,7 @@ hst_temps_ramp_down : {string.Join(" ", currentConfig.HstTempsRampDown)}";
             {
                 Title = title,
                 Content = message,
-                CloseButtonText = "OK"
+                CloseButtonText = "确定"
             };
 
             if (this.Content != null)
@@ -2678,7 +2690,7 @@ hst_temps_ramp_down : {string.Join(" ", currentConfig.HstTempsRampDown)}";
             {
                 Title = title,
                 Content = message,
-                CloseButtonText = "OK",
+                CloseButtonText = "确定",
                 XamlRoot = this.Content.XamlRoot
             };
             await dialog.ShowAsync();

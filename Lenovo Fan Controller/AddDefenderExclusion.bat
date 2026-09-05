@@ -1,34 +1,35 @@
 @echo off
+chcp 65001 >nul
 setlocal
 
-:: Check for administrative privileges
+:: 检查管理员权限
 net session >nul 2>&1
 if %errorLevel% neq 0 (
-    echo ERROR: This script must be run as Administrator.
-    echo Please right-click and "Run as administrator".
+    echo 错误：此脚本必须以管理员身份运行。
+    echo 请右键单击脚本并选择“以管理员身份运行”。
     pause
     exit /b
 )
 
-:: Get the path to the DLL relative to this script
+:: 获取 DLL 相对于此脚本的路径
 set "DLL_PATH=%~dp0Fan Control\WinRing0x64.dll"
 
 echo.
-echo Adding Windows Defender exclusion for:
+echo 正在将以下路径添加到 Windows Defender 排除项：
 echo "%DLL_PATH%"
 echo.
 
-:: Execute the PowerShell command to add the exclusion
+:: 执行 PowerShell 命令以添加排除项
 powershell -Command "Add-MpPreference -ExclusionPath '%DLL_PATH%'"
 
 if %errorLevel% == 0 (
     echo.
-    echo SUCCESS: Permanent exclusion added to Windows Defender.
+    echo 成功：已添加 Windows Defender 永久排除项。
     echo.
 ) else (
     echo.
-    echo FAILED: Could not add exclusion. 
-    echo Ensure Windows Defender is active and you have permission.
+    echo 失败：无法添加排除项。
+    echo 请确认 Windows Defender 已启用且你拥有相应权限。
     echo.
 )
 
