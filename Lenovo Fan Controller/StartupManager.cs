@@ -75,7 +75,7 @@ namespace Lenovo_Fan_Controller
                 var xml = $@"<?xml version=""1.0"" encoding=""UTF-16""?>
 <Task version=""1.2"" xmlns=""http://schemas.microsoft.com/windows/2004/02/mit/task"">
   <RegistrationInfo>
-    <Description>Legion Fan Controller - Automatic startup</Description>
+    <Description>拯救者风扇控制器 - 自动启动</Description>
     <Author>{Environment.UserName}</Author>
   </RegistrationInfo>
   <Triggers>

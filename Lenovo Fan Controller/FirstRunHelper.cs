@@ -74,9 +74,9 @@ namespace Lenovo_Fan_Controller
             {
                 var dialog = new ContentDialog
                 {
-                    Title = "⚠️ Important Warning",
+                    Title = "⚠️ 重要警告",
                     Content = CreateWarningContent(),
-                    PrimaryButtonText = "I Understand",
+                    PrimaryButtonText = "我已了解",
                     DefaultButton = ContentDialogButton.Primary,
                     XamlRoot = window.Content?.XamlRoot
                 };
@@ -110,13 +110,13 @@ namespace Lenovo_Fan_Controller
             // Warning text
             var warningText = new TextBlock
             {
-                Text = "Legion Fan Controller allows you to modify your laptop's fan curves and temperature points.",
+                Text = "拯救者风扇控制器允许你修改笔记本电脑的风扇曲线和温度节点。",
                 TextWrapping = Microsoft.UI.Xaml.TextWrapping.Wrap
             };
 
             var dangerText = new TextBlock
             {
-                Text = "⚠️ DANGER: Incorrect fan settings can cause overheating and permanent hardware damage!",
+                Text = "⚠️ 危险：不正确的风扇设置可能导致设备过热并造成永久性硬件损坏！",
                 TextWrapping = Microsoft.UI.Xaml.TextWrapping.Wrap,
                 Foreground = new Microsoft.UI.Xaml.Media.SolidColorBrush(
                     Microsoft.UI.Colors.OrangeRed),
@@ -125,17 +125,17 @@ namespace Lenovo_Fan_Controller
 
             var instructionsText = new TextBlock
             {
-                Text = "Only modify these settings if you:\n" +
-                       "• Understand fan curves and thermal management\n" +
-                       "• Know your laptop's thermal limits\n" +
-                       "• Monitor temperatures while testing\n" +
-                       "• Are willing to accept the risks",
+                Text = "仅当你满足以下条件时才修改这些设置：\n" +
+                       "• 了解风扇曲线和散热管理\n" +
+                       "• 清楚笔记本电脑的温度限制\n" +
+                       "• 测试时持续监控温度\n" +
+                       "• 愿意承担相关风险",
                 TextWrapping = Microsoft.UI.Xaml.TextWrapping.Wrap
             };
 
             var disclaimerText = new TextBlock
             {
-                Text = "Any modifications you made are your own responsibility.",
+                Text = "你需要自行承担修改设置所产生的一切责任。",
                 TextWrapping = Microsoft.UI.Xaml.TextWrapping.Wrap,
                 FontStyle = Windows.UI.Text.FontStyle.Italic,
                 Opacity = 0.8

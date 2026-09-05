@@ -21,11 +21,11 @@ namespace Lenovo_Fan_Controller
                 using var client = new HttpClient();
                 client.DefaultRequestHeaders.Add("User-Agent", "Legion-Fan-Controller");
 
-                onProgress?.Invoke("Downloading PawnIO Setup...");
+                onProgress?.Invoke("正在下载 PawnIO 安装程序…");
                 string setupPath = Path.Combine(Path.GetTempPath(), "PawnIO.Setup.exe");
                 await DownloadFileAsync(client, SetupUrl, setupPath);
 
-                onProgress?.Invoke("Installing PawnIO Driver (this may take a moment)...");
+                onProgress?.Invoke("正在安装 PawnIO 驱动（可能需要一些时间）…");
                 var process = Process.Start(new ProcessStartInfo
                 {
                     FileName = setupPath,
@@ -35,18 +35,18 @@ namespace Lenovo_Fan_Controller
                 });
                 if (process != null) await process.WaitForExitAsync();
 
-                onProgress?.Invoke("Fetching latest Modules download link...");
+                onProgress?.Invoke("正在获取最新模块的下载链接…");
                 string modulesUrl = await GetLatestModulesUrl(client);
                 if (string.IsNullOrEmpty(modulesUrl))
                 {
-                    throw new Exception("Could not find the latest Modules download link in GitHub API.");
+                    throw new Exception("无法从 GitHub API 获取最新模块的下载链接。");
                 }
 
-                onProgress?.Invoke("Downloading Modules...");
+                onProgress?.Invoke("正在下载模块…");
                 string zipPath = Path.Combine(Path.GetTempPath(), "PawnIO.Modules.zip");
                 await DownloadFileAsync(client, modulesUrl, zipPath);
 
-                onProgress?.Invoke("Extracting LpcIO.bin...");
+                onProgress?.Invoke("正在解压 LpcIO.bin…");
                 string extractPath = Path.Combine(Path.GetTempPath(), "PawnIOExtract");
                 if (Directory.Exists(extractPath)) Directory.Delete(extractPath, true);
                 System.IO.Compression.ZipFile.ExtractToDirectory(zipPath, extractPath);
@@ -59,7 +59,7 @@ namespace Lenovo_Fan_Controller
                     Directory.CreateDirectory(DestDir);
                 }
 
-                onProgress?.Invoke("Finalizing installation...");
+                onProgress?.Invoke("正在完成安装…");
                 File.Copy(sourceBin, destBin, true);
 
                 // Cleanup
@@ -71,7 +71,7 @@ namespace Lenovo_Fan_Controller
             }
             catch (Exception ex)
             {
-                onProgress?.Invoke($"Error: {ex.Message}");
+                onProgress?.Invoke($"错误：{ex.Message}");
                 return false;
             }
         }

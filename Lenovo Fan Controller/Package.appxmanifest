@@ -15,7 +15,7 @@
   <mp:PhoneIdentity PhoneProductId="e17b8cfa-826e-49a4-b927-cff67c38ee42" PhonePublisherId="00000000-0000-0000-0000-000000000000"/>
 
   <Properties>
-    <DisplayName>Lenovo Fan Controller</DisplayName>
+    <DisplayName>拯救者风扇控制器</DisplayName>
     <PublisherDisplayName>Kangarroar</PublisherDisplayName>
     <Logo>Assets\StoreLogo.png</Logo>
   </Properties>
@@ -34,8 +34,8 @@
       Executable="$targetnametoken$.exe"
       EntryPoint="$targetentrypoint$">
       <uap:VisualElements
-        DisplayName="Lenovo Fan Controller"
-        Description="Lenovo Fan Controller"
+        DisplayName="拯救者风扇控制器"
+        Description="拯救者风扇控制器"
         BackgroundColor="transparent"
         Square150x150Logo="Assets\Square150x150Logo.scale-200.png"
         Square44x44Logo="Assets\Square44x44Logo.scale-200.png">
